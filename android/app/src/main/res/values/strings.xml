@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Plan App</string>
+    <string name="title_activity_main">Plan App</string>
+    <string name="package_name">com.sahand.planapp</string>
+    <string name="custom_url_scheme">com.sahand.planapp</string>
+</resources>
