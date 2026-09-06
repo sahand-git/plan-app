@@ -1,0 +1,1 @@
+{"name":"DayFlow Planner","short_name":"DayFlow","description":"Clean, offline-first daily planner, habit tracker, and journal","start_url":"./","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","lang":"en","scope":"./","orientation":"portrait","icons":[{"src":"/favicon.svg","sizes":"192x192 512x512","type":"image/svg+xml","purpose":"any maskable"}]}
