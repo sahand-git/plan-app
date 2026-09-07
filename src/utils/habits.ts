@@ -8,6 +8,7 @@ export interface HabitStreakInfo {
   totalCompleted: number;
   completedToday: boolean;
   recentWeek: { date: string; dayName: string; completed: boolean }[];
+  weekCompletedCount: number;
 }
 
 /**
@@ -73,13 +74,18 @@ export async function calculateHabitStreak(
   // Generate recent 7 days (including targetDateStr)
   const targetDateObj = parseISO(targetDateStr);
   const recentWeek = [];
+  let weekCompletedCount = 0;
   for (let i = 6; i >= 0; i--) {
     const d = subDays(targetDateObj, i);
     const dStr = formatDateString(d);
+    const isCompleted = completedDatesSet.has(dStr);
+    if (isCompleted) {
+      weekCompletedCount++;
+    }
     recentWeek.push({
       date: dStr,
       dayName: format(d, 'EE'),
-      completed: completedDatesSet.has(dStr),
+      completed: isCompleted,
     });
   }
 
@@ -89,6 +95,7 @@ export async function calculateHabitStreak(
     totalCompleted,
     completedToday,
     recentWeek,
+    weekCompletedCount,
   };
 }
 

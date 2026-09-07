@@ -111,9 +111,21 @@ export const DailyTasksView: React.FC<DailyTasksViewProps> = ({
   const completionPercentage = totalDayTasks > 0 ? Math.round((completedTasks.length / totalDayTasks) * 100) : 0;
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-4 sm:py-6">
+    <div className="w-full max-w-md mx-auto px-3.5 py-3 sm:py-4">
       {/* Date Navigation Strip */}
       <DateNavigator currentDate={currentDate} onSelectDate={onSelectDate} />
+
+      {/* Primary Mobile Add Task Action Button inside Task Window */}
+      <div className="my-3">
+        <button
+          type="button"
+          onClick={onOpenNewTask}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-600/25 active:scale-[0.98] transition-all"
+        >
+          <Plus className="w-5 h-5 stroke-[2.5]" />
+          <span>Add New Task</span>
+        </button>
+      </div>
 
       {/* Notification status and permission banner */}
       <NotificationBanner
@@ -124,7 +136,7 @@ export const DailyTasksView: React.FC<DailyTasksViewProps> = ({
 
       {/* Progress Bar (if there are tasks for the day) */}
       {totalDayTasks > 0 && (
-        <div className="my-4 p-3.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-2xs">
+        <div className="my-3 p-3.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-2xs">
           <div className="flex items-center justify-between text-xs mb-2">
             <span className="font-semibold text-slate-700 dark:text-slate-300">
               Daily Progress

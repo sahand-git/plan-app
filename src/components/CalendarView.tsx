@@ -108,7 +108,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const selectedDateObj = parseISO(currentDate);
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-4 sm:py-6 animate-in fade-in duration-200">
+    <div className="w-full max-w-md mx-auto px-3.5 py-3 sm:py-4 animate-in fade-in duration-200">
       {/* Calendar Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 p-3.5 rounded-2xl shadow-2xs">
         <div className="flex items-center gap-2.5">

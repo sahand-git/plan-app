@@ -5,10 +5,97 @@
 @layer base {
   html {
     color-scheme: light dark;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased min-h-screen;
+    @apply bg-parchment text-stone-800 dark:bg-night-bg dark:text-stone-100 antialiased min-h-screen select-none font-sans;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+  input, textarea {
+    @apply select-text;
+  }
+  button, a, input, select, textarea {
+    touch-action: manipulation;
+  }
+}
+
+/* Botanical Micro-Animations: Slow, Gentle, Organic */
+@keyframes treeBreezeSlow {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(1.2deg) skewX(0.5deg);
+  }
+  75% {
+    transform: rotate(-0.8deg) skewX(-0.3deg);
+  }
+}
+
+@keyframes leafRustle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.02) rotate(1.5deg);
+  }
+}
+
+@keyframes gentleBreathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.015);
+    opacity: 1;
+  }
+}
+
+@keyframes softFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tree-breeze {
+  animation: treeBreezeSlow 7s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.animate-leaf-rustle {
+  animation: leafRustle 5s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.animate-gentle-breathe {
+  animation: gentleBreathe 6s ease-in-out infinite;
+}
+
+.animate-soft-fade-up {
+  animation: softFadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* iOS Spring & Sheet Transitions */
+.ios-spring {
+  transition: all 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Android Material 3 Easing */
+.m3-transition {
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Safe area insets for mobile */
+.safe-pb {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+.safe-pt {
+  padding-top: env(safe-area-inset-top, 16px);
 }
 

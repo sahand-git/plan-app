@@ -1,7 +1,8 @@
 {
-  "name": "planner",
+  "name": "the-tree-planner",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "The Tree Planner — Calm Minimalist Daily Planner for iOS & Android",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -100,7 +100,7 @@ export const HabitTrackerView: React.FC<HabitTrackerViewProps> = ({
   }).length;
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-4 sm:py-6 animate-in fade-in duration-200">
+    <div className="w-full max-w-md mx-auto px-3.5 py-3 sm:py-4 animate-in fade-in duration-200">
       {/* Date Navigation */}
       <DateNavigator currentDate={currentDate} onSelectDate={onSelectDate} />
 
@@ -186,13 +186,33 @@ export const HabitTrackerView: React.FC<HabitTrackerViewProps> = ({
                       </h3>
                     </div>
 
-                    {/* Streak & Best Badges */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200/50 dark:border-amber-900/40">
-                        <Flame className="w-3 h-3 text-amber-500" />
-                        {streakInfo.currentStreak} {streakInfo.currentStreak === 1 ? 'day' : 'days'}
+                    {/* Weekly Completed Days Fire Badge & Streaks */}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      {/* Fire Badge: Total days selected in the week */}
+                      <span
+                        className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all ${
+                          (streakInfo.weekCompletedCount ?? 0) > 0
+                            ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-900/40 shadow-2xs'
+                            : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                        }`}
+                        title={`${streakInfo.weekCompletedCount ?? 0} days completed out of 7 this week`}
+                      >
+                        <Flame
+                          className={`w-3.5 h-3.5 ${
+                            (streakInfo.weekCompletedCount ?? 0) > 0 ? 'text-amber-500 fill-amber-500' : 'text-slate-400'
+                          }`}
+                        />
+                        <span>{(streakInfo.weekCompletedCount ?? 0)} of 7 this week</span>
                       </span>
 
+                      {/* Consecutive streak badge if active */}
+                      {streakInfo.currentStreak > 1 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-1.5 py-0.5 rounded-md border border-orange-200/50 dark:border-orange-900/40">
+                          <span>⚡ {streakInfo.currentStreak}d streak</span>
+                        </span>
+                      )}
+
+                      {/* Best historical streak badge */}
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">
                         <Trophy className="w-3 h-3 text-amber-500/80" />
                         Best: {streakInfo.bestStreak}

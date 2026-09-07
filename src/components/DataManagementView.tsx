@@ -1,9 +1,8 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Download,
   Upload,
-  Database,
   CheckCircle2,
   AlertTriangle,
   FileJson,
@@ -11,16 +10,17 @@ import {
   Moon,
   Sun,
   Laptop,
-  Wifi,
-  WifiOff
+  Sparkles,
+  Sprout,
 } from 'lucide-react';
-import { db, type Task, type DailyNote, type Habit, type HabitLog } from '../db';
+import { db, type Task, type DailyNote, type Habit, type HabitLog, type TreeDayLog } from '../db';
 import type { Theme } from '../hooks/useTheme';
-import { useNotificationScheduler } from '../hooks/useNotificationScheduler';
 
 interface DataManagementViewProps {
   theme: Theme;
   onSetTheme: (theme: Theme) => void;
+  noPressureMode: boolean;
+  onToggleNoPressure: () => void;
 }
 
 interface ExportPayload {
@@ -32,12 +32,15 @@ interface ExportPayload {
     notes: DailyNote[];
     habits: Habit[];
     habitLogs: HabitLog[];
+    treeLogs?: TreeDayLog[];
   };
 }
 
 export const DataManagementView: React.FC<DataManagementViewProps> = ({
   theme,
   onSetTheme,
+  noPressureMode,
+  onToggleNoPressure,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -45,27 +48,24 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   const [pendingImportData, setPendingImportData] = useState<ExportPayload | null>(null);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
 
-  const { permission, requestPermission, sendTestNotification } = useNotificationScheduler();
-
   // Queries
   const tasks = useLiveQuery(() => db.tasks.toArray()) || [];
   const notes = useLiveQuery(() => db.notes.toArray()) || [];
   const habits = useLiveQuery(() => db.habits.toArray()) || [];
-  const habitLogs = useLiveQuery(() => db.habitLogs.toArray()) || [];
-
-  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  const treeLogs = useLiveQuery(() => db.treeLogs.toArray()) || [];
 
   // Export JSON file
   const handleExport = () => {
     const payload: ExportPayload = {
       version: 1,
-      appName: 'DayFlow Planner',
+      appName: 'The Tree Planner',
       exportedAt: new Date().toISOString(),
       data: {
         tasks,
         notes,
         habits,
-        habitLogs,
+        habitLogs: [],
+        treeLogs,
       },
     };
 
@@ -75,7 +75,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
     const a = document.createElement('a');
     const dateStr = new Date().toISOString().slice(0, 10);
     a.href = url;
-    a.download = `dayflow-backup-${dateStr}.json`;
+    a.download = `the-tree-planner-backup-${dateStr}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -94,7 +94,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
         const parsed = JSON.parse(text) as ExportPayload;
 
         if (!parsed.data || (!parsed.data.tasks && !parsed.data.notes && !parsed.data.habits)) {
-          throw new Error('Invalid DayFlow backup file format.');
+          throw new Error('Invalid backup file format.');
         }
 
         setPendingImportData(parsed);
@@ -105,7 +105,6 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
       }
     };
     reader.readAsText(file);
-    // Reset file input so user can re-select the same file if needed
     e.target.value = '';
   };
 
@@ -115,18 +114,23 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
 
     try {
       setImportError(null);
-      await db.transaction('rw', [db.tasks, db.notes, db.habits, db.habitLogs], async () => {
+      await db.transaction('rw', [db.tasks, db.notes, db.habits, db.habitLogs, db.treeLogs], async () => {
         if (mode === 'replace') {
           await db.tasks.clear();
           await db.notes.clear();
           await db.habits.clear();
           await db.habitLogs.clear();
+          await db.treeLogs.clear();
         }
 
-        const { tasks: inTasks = [], notes: inNotes = [], habits: inHabits = [], habitLogs: inLogs = [] } =
-          pendingImportData.data;
+        const {
+          tasks: inTasks = [],
+          notes: inNotes = [],
+          habits: inHabits = [],
+          habitLogs: inLogs = [],
+          treeLogs: inTree = [],
+        } = pendingImportData.data;
 
-        // Insert tasks
         for (const t of inTasks) {
           const { id, ...rest } = t;
           if (mode === 'merge') {
@@ -136,12 +140,10 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
           }
         }
 
-        // Insert notes
         for (const n of inNotes) {
           await db.notes.put(n);
         }
 
-        // Insert habits & logs
         for (const h of inHabits) {
           if (mode === 'replace') {
             await db.habits.put(h);
@@ -159,6 +161,10 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
             await db.habitLogs.add(rest as HabitLog);
           }
         }
+
+        for (const tr of inTree) {
+          await db.treeLogs.put(tr);
+        }
       });
 
       const totalItems =
@@ -166,7 +172,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
         (pendingImportData.data.notes?.length || 0) +
         (pendingImportData.data.habits?.length || 0);
 
-      setImportStatus(`Successfully imported ${totalItems} records (${mode === 'replace' ? 'replaced existing' : 'merged'}).`);
+      setImportStatus(`Successfully restored ${totalItems} items (${mode === 'replace' ? 'replaced' : 'merged'}).`);
       setPendingImportData(null);
       setTimeout(() => setImportStatus(null), 5000);
     } catch (err: unknown) {
@@ -176,123 +182,180 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
 
   // Clear Database
   const handleClearAll = async () => {
-    await db.transaction('rw', [db.tasks, db.notes, db.habits, db.habitLogs], async () => {
+    await db.transaction('rw', [db.tasks, db.notes, db.habits, db.habitLogs, db.treeLogs], async () => {
       await db.tasks.clear();
       await db.notes.clear();
       await db.habits.clear();
       await db.habitLogs.clear();
+      await db.treeLogs.clear();
     });
+    localStorage.removeItem('treeplanner_journal_pin');
     setIsConfirmingClear(false);
-    setImportStatus('All data has been cleared.');
+    setImportStatus('All local records have been cleared.');
     setTimeout(() => setImportStatus(null), 4000);
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-4 sm:py-6 animate-in fade-in duration-200 space-y-6">
+    <div className="w-full max-w-md mx-auto px-4 py-4 space-y-5 animate-soft-fade-up pb-24">
       {/* Overview Card */}
-      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-2xs">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Data Management & Settings
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                100% private, client-side IndexedDB storage. No cloud servers.
-              </p>
-            </div>
+      <div className="p-5 bg-white dark:bg-night-surface border border-stone-200/70 dark:border-night-border rounded-3xl shadow-calm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-sage-100 dark:bg-night-card text-sage-600 dark:text-sage-400 flex items-center justify-center">
+            <Sprout className="w-5 h-5" />
           </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            {isOnline ? (
-              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[11px] font-medium">
-                <Wifi className="w-3.5 h-3.5" /> PWA Ready
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 text-[11px] font-medium">
-                <WifiOff className="w-3.5 h-3.5" /> Offline Mode
-              </span>
-            )}
+          <div>
+            <h2 className="font-serif text-base font-medium text-stone-800 dark:text-stone-100">
+              Vault & Local Storage
+            </h2>
+            <p className="text-xs text-stone-500 dark:text-stone-400 font-light">
+              One-time purchase, 100% on-device. Zero recurring subscription.
+            </p>
           </div>
         </div>
 
-        {/* Database Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5">
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-center">
-            <span className="text-lg font-bold text-slate-900 dark:text-white block">
+        {/* Local Storage Stats */}
+        <div className="grid grid-cols-4 gap-2 mt-5">
+          <div className="p-2.5 bg-stone-50 dark:bg-night-card/60 rounded-2xl text-center border border-stone-200/50 dark:border-night-border">
+            <span className="text-base font-serif font-semibold text-stone-800 dark:text-stone-100 block">
               {tasks.length}
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">Tasks</span>
+            <span className="text-[10px] text-stone-400">Tasks</span>
           </div>
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-center">
-            <span className="text-lg font-bold text-slate-900 dark:text-white block">
+          <div className="p-2.5 bg-stone-50 dark:bg-night-card/60 rounded-2xl text-center border border-stone-200/50 dark:border-night-border">
+            <span className="text-base font-serif font-semibold text-stone-800 dark:text-stone-100 block">
               {notes.length}
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">Journal Notes</span>
+            <span className="text-[10px] text-stone-400">Journal</span>
           </div>
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-center">
-            <span className="text-lg font-bold text-slate-900 dark:text-white block">
+          <div className="p-2.5 bg-stone-50 dark:bg-night-card/60 rounded-2xl text-center border border-stone-200/50 dark:border-night-border">
+            <span className="text-base font-serif font-semibold text-stone-800 dark:text-stone-100 block">
               {habits.length}
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">Habits</span>
+            <span className="text-[10px] text-stone-400">Habits</span>
           </div>
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-center">
-            <span className="text-lg font-bold text-slate-900 dark:text-white block">
-              {habitLogs.length}
+          <div className="p-2.5 bg-stone-50 dark:bg-night-card/60 rounded-2xl text-center border border-stone-200/50 dark:border-night-border">
+            <span className="text-base font-serif font-semibold text-stone-800 dark:text-stone-100 block">
+              {treeLogs.length}
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">Habit Logs</span>
+            <span className="text-[10px] text-stone-400">Tree Days</span>
           </div>
         </div>
       </div>
 
       {/* Success / Error Banners */}
       {importStatus && (
-        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+        <div className="p-3.5 bg-sage-50 dark:bg-night-card border border-sage-200 dark:border-sage-800 text-sage-800 dark:text-sage-200 rounded-2xl text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-sage-600" />
           <span>{importStatus}</span>
         </div>
       )}
 
       {importError && (
-        <div className="p-3.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 rounded-xl text-xs flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+        <div className="p-3.5 bg-amber-50 dark:bg-night-card border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 rounded-2xl text-xs flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
           <span>{importError}</span>
         </div>
       )}
 
-      {/* Backup & Restore Card */}
-      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-2xs space-y-4">
+      {/* Preferences Card */}
+      <div className="p-5 bg-white dark:bg-night-surface border border-stone-200/70 dark:border-night-border rounded-3xl shadow-calm space-y-4">
+        <h3 className="font-serif text-sm font-medium text-stone-800 dark:text-stone-100">
+          Mindful Preferences
+        </h3>
+
+        {/* No-Pressure Mode Switch */}
+        <div className="flex items-center justify-between py-2 border-b border-stone-100 dark:border-night-border">
+          <div className="pr-4">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-sage-600 dark:text-sage-400" />
+              <span className="text-xs font-medium text-stone-800 dark:text-stone-200">
+                No-Pressure Mode
+              </span>
+            </div>
+            <p className="text-[11px] text-stone-400 mt-0.5 font-light">
+              Conceals numbers, percentages, and streaks app-wide.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onToggleNoPressure}
+            className={`w-11 h-6 rounded-full transition-colors relative flex items-center px-0.5 ${
+              noPressureMode ? 'bg-sage-600' : 'bg-stone-300 dark:bg-stone-600'
+            }`}
+          >
+            <span
+              className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform duration-200 ${
+                noPressureMode ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Theme Settings */}
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <span className="text-xs font-medium text-stone-800 dark:text-stone-200 block">
+              Calm Atmosphere
+            </span>
+            <span className="text-[11px] text-stone-400 font-light">
+              Parchment Light or Night Forest
+            </span>
+          </div>
+
+          <div className="flex items-center bg-stone-100 dark:bg-night-card p-1 rounded-2xl border border-stone-200/60 dark:border-night-border text-xs">
+            {[
+              { id: 'light' as Theme, label: 'Light', icon: <Sun className="w-3.5 h-3.5" /> },
+              { id: 'dark' as Theme, label: 'Night', icon: <Moon className="w-3.5 h-3.5" /> },
+              { id: 'system' as Theme, label: 'System', icon: <Laptop className="w-3.5 h-3.5" /> },
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onSetTheme(t.id)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-xl font-medium transition ${
+                  theme === t.id
+                    ? 'bg-white dark:bg-night-surface text-sage-700 dark:text-sage-300 shadow-xs'
+                    : 'text-stone-500 hover:text-stone-900'
+                }`}
+              >
+                {t.icon}
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Backup & Restore */}
+      <div className="p-5 bg-white dark:bg-night-surface border border-stone-200/70 dark:border-night-border rounded-3xl shadow-calm space-y-4">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FileJson className="w-4 h-4 text-indigo-500" /> Backup & Restore
+          <h3 className="font-serif text-sm font-medium text-stone-800 dark:text-stone-100 flex items-center gap-2">
+            <FileJson className="w-4 h-4 text-sage-600" />
+            <span>Manual Backup & File Export</span>
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Export a portable JSON backup file with all your tasks, habits, streaks, and journal notes.
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 font-light leading-relaxed">
+            Download your data as a clean JSON file to store on your device or transfer to a new phone.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          {/* Export Button */}
+        <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
           <button
             type="button"
             onClick={handleExport}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition shadow-indigo-600/20"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-sage-600 hover:bg-sage-700 active:scale-95 text-white font-medium text-xs rounded-2xl shadow-xs transition"
           >
             <Download className="w-4 h-4" />
-            <span>Export Backup to JSON</span>
+            <span>Export Backup File</span>
           </button>
 
-          {/* Import Button */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs rounded-xl transition"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-100 dark:bg-night-card hover:bg-stone-200/60 dark:hover:bg-night-border border border-stone-200/80 dark:border-night-border text-stone-700 dark:text-stone-300 font-medium text-xs rounded-2xl transition"
           >
-            <Upload className="w-4 h-4 text-slate-500" />
-            <span>Import from JSON Backup</span>
+            <Upload className="w-4 h-4 text-stone-500" />
+            <span>Restore Backup</span>
           </button>
           <input
             ref={fileInputRef}
@@ -303,38 +366,37 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
           />
         </div>
 
-        {/* Pending Import Modal / Confirmation */}
+        {/* Pending Import */}
         {pendingImportData && (
-          <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900 rounded-xl space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-indigo-900 dark:text-indigo-200">
-              <CheckCircle2 className="w-4 h-4 text-indigo-500" />
-              <span>Backup file parsed successfully</span>
+          <div className="p-4 bg-stone-50 dark:bg-night-card border border-stone-200 dark:border-night-border rounded-2xl space-y-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-stone-800 dark:text-stone-100">
+              <CheckCircle2 className="w-4 h-4 text-sage-600" />
+              <span>Backup file recognized</span>
             </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-              Found <strong>{pendingImportData.data.tasks?.length || 0} tasks</strong>,{' '}
-              <strong>{pendingImportData.data.notes?.length || 0} journal notes</strong>,{' '}
-              <strong>{pendingImportData.data.habits?.length || 0} habits</strong>, and{' '}
-              <strong>{pendingImportData.data.habitLogs?.length || 0} logs</strong>.
+            <p className="text-xs text-stone-600 dark:text-stone-400 font-light">
+              Contains {pendingImportData.data.tasks?.length || 0} tasks,{' '}
+              {pendingImportData.data.notes?.length || 0} journal entries, and{' '}
+              {pendingImportData.data.habits?.length || 0} habits.
             </p>
             <div className="flex items-center gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => executeImport('merge')}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-lg shadow-2xs"
+                className="px-3 py-1.5 bg-sage-600 hover:bg-sage-700 text-white font-medium text-xs rounded-xl shadow-xs"
               >
-                Merge with Existing Data
+                Merge
               </button>
               <button
                 type="button"
                 onClick={() => executeImport('replace')}
-                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs rounded-lg shadow-2xs"
+                className="px-3 py-1.5 bg-stone-800 text-white font-medium text-xs rounded-xl shadow-xs"
               >
-                Replace All Data
+                Replace All
               </button>
               <button
                 type="button"
                 onClick={() => setPendingImportData(null)}
-                className="px-3 py-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 text-xs"
+                className="px-3 py-1.5 text-stone-500 text-xs"
               >
                 Cancel
               </button>
@@ -343,129 +405,45 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
         )}
       </div>
 
-      {/* App Appearance & Notifications Settings */}
-      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-2xs space-y-5">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-          Preferences & Controls
-        </h3>
-
-        {/* Theme Settings */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
-              Theme Mode
-            </span>
-            <span className="text-[11px] text-slate-400">
-              Customize interface color scheme
-            </span>
-          </div>
-
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/60 dark:border-slate-700/50 text-xs">
-            {[
-              { id: 'light' as Theme, label: 'Light', icon: <Sun className="w-3.5 h-3.5" /> },
-              { id: 'dark' as Theme, label: 'Dark', icon: <Moon className="w-3.5 h-3.5" /> },
-              { id: 'system' as Theme, label: 'System', icon: <Laptop className="w-3.5 h-3.5" /> },
-            ].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => onSetTheme(t.id)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition ${
-                  theme === t.id
-                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 font-semibold shadow-2xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                {t.icon}
-                <span>{t.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Notifications Setting */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
-              Browser Notifications
-            </span>
-            <span className="text-[11px] text-slate-400">
-              Status: <strong className="capitalize">{permission}</strong> (Best-effort delivery)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {permission !== 'granted' ? (
-              <button
-                type="button"
-                onClick={requestPermission}
-                className="px-2.5 py-1 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition"
-              >
-                Enable
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={sendTestNotification}
-                className="px-2.5 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 transition"
-              >
-                Test Sound & Alert
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Danger Zone: Clear Data */}
-        <div className="flex items-center justify-between pt-1">
-          <div>
-            <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 block">
-              Clear All Planner Data
-            </span>
-            <span className="text-[11px] text-slate-400">
-              Permanently wipe all tasks, notes, and habits from this device
-            </span>
-          </div>
-
-          {isConfirmingClear ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleClearAll}
-                className="px-2.5 py-1 text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white rounded-lg shadow-2xs transition"
-              >
-                Yes, Delete All
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsConfirmingClear(false)}
-                className="px-2.5 py-1 text-xs text-slate-500 hover:text-slate-700"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsConfirmingClear(true)}
-              className="px-2.5 py-1 text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-lg transition"
-            >
-              Reset Data
-            </button>
-          )}
+      {/* Privacy Guarantee */}
+      <div className="p-4 bg-earth-50/60 dark:bg-night-card/40 border border-earth-200/40 dark:border-night-border rounded-2xl flex items-start gap-3 text-xs text-stone-500 dark:text-stone-400">
+        <Shield className="w-4 h-4 text-sage-600 shrink-0 mt-0.5" />
+        <div>
+          <span className="font-medium text-stone-800 dark:text-stone-200 block">
+            Zero Cloud Dependency
+          </span>
+          <p className="text-[11px] font-light leading-relaxed mt-0.5">
+            Your tasks, habits, and private journal remain exclusively inside your browser or device storage.
+            No accounts, no third-party tracking, no ongoing cloud costs.
+          </p>
         </div>
       </div>
 
-      {/* Security & Privacy Banner */}
-      <div className="p-4 bg-slate-100/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl flex items-start gap-3 text-xs text-slate-500 dark:text-slate-400">
-        <Shield className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-semibold text-slate-700 dark:text-slate-300">
-            Local-First & Offline Privacy
-          </p>
-          <p className="text-[11px] leading-relaxed">
-            Your tasks, notes, habits, and streak data remain exclusively on your local device in IndexedDB. No external servers or analytics ever access your data.
-          </p>
-        </div>
+      {/* Clear Database (Quiet) */}
+      <div className="pt-2 text-center">
+        {isConfirmingClear ? (
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={handleClearAll}
+              className="px-3 py-1.5 text-xs text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl"
+            >
+              Confirm Wipe All
+            </button>
+            <button
+              onClick={() => setIsConfirmingClear(false)}
+              className="px-3 py-1.5 text-xs text-stone-500"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsConfirmingClear(true)}
+            className="text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300"
+          >
+            Reset All Local Data
+          </button>
+        )}
       </div>
     </div>
   );

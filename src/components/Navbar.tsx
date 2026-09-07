@@ -1,102 +1,56 @@
-import React from 'react';
-import {
-  CheckSquare,
-  Calendar,
-  BookOpen,
-  Flame,
-  Settings,
-  Sun,
-  Moon,
-  Plus
-} from 'lucide-react';
-import type { Theme } from '../hooks/useTheme';
+﻿import React from 'react';
+import { Plus, Sprout } from 'lucide-react';
 
 export type AppView = 'tasks' | 'calendar' | 'notes' | 'habits' | 'data';
 
 interface NavbarProps {
   currentView: AppView;
-  onSelectView: (view: AppView) => void;
   onOpenNewTask: () => void;
-  theme: Theme;
-  onToggleTheme: () => void;
 }
+
+const VIEW_TITLES: Record<AppView, { title: string; subtitle: string }> = {
+  tasks: { title: 'The Tree Planner', subtitle: 'Today’s Gentle Rhythm' },
+  calendar: { title: 'Calendar Horizon', subtitle: 'Peaceful Weekly Flow' },
+  notes: { title: 'Daily Journal', subtitle: 'Private Free-Write Sanctuary' },
+  habits: { title: 'Habits & Practice', subtitle: 'Quiet Consistency' },
+  data: { title: 'Vault & Privacy', subtitle: 'Local-First On Device' },
+};
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentView,
-  onSelectView,
   onOpenNewTask,
-  theme,
-  onToggleTheme,
 }) => {
-  const navItems: { id: AppView; label: string; icon: React.ReactNode }[] = [
-    { id: 'tasks', label: 'Tasks', icon: <CheckSquare className="w-4 h-4" /> },
-    { id: 'calendar', label: 'Calendar', icon: <Calendar className="w-4 h-4" /> },
-    { id: 'notes', label: 'Journal', icon: <BookOpen className="w-4 h-4" /> },
-    { id: 'habits', label: 'Habits', icon: <Flame className="w-4 h-4" /> },
-    { id: 'data', label: 'Data', icon: <Settings className="w-4 h-4" /> },
-  ];
+  const current = VIEW_TITLES[currentView];
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80">
-      <div className="max-w-3xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
-        {/* Brand & Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-indigo-500/20">
-            D
+    <header className="sticky top-0 z-30 w-full bg-parchment/90 dark:bg-night-surface/90 backdrop-blur-md border-b border-stone-200/60 dark:border-night-border transition-colors">
+      <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between gap-2">
+        {/* Brand / View Title */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-sage-100 dark:bg-night-card flex items-center justify-center text-sage-600 dark:text-sage-400">
+            <Sprout className="w-4 h-4" />
           </div>
-          <span className="font-bold text-base tracking-tight hidden xs:inline text-slate-900 dark:text-white">
-            DayFlow
-          </span>
+
+          <div>
+            <h1 className="font-serif text-base font-medium text-stone-800 dark:text-stone-100 leading-tight">
+              {current.title}
+            </h1>
+            <span className="text-[10px] text-stone-400 dark:text-stone-400 font-light block leading-none">
+              {current.subtitle}
+            </span>
+          </div>
         </div>
 
-        {/* Navigation Tabs (Desktop & Mobile Pills) */}
-        <nav className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/50 overflow-x-auto max-w-[280px] sm:max-w-none">
-          {navItems.map((item) => {
-            const isActive = currentView === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onSelectView(item.id)}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  isActive
-                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                {item.icon}
-                <span className="hidden sm:inline">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Right Actions: Theme Toggle & Quick Add Task */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-800 transition"
-            title={`Current: ${theme}. Click to switch theme.`}
-            aria-label="Toggle dark mode"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-slate-700" />
-            )}
-          </button>
-
+        {/* Right Actions */}
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={onOpenNewTask}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition shadow-indigo-600/20"
-            title="Add Task (Press 'n')"
+            className="flex items-center gap-1 px-3 py-1.5 bg-sage-600 hover:bg-sage-700 active:scale-95 text-white text-xs font-medium rounded-xl shadow-xs transition-all"
+            title="Add gentle task or habit"
           >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add Task</span>
-            <kbd className="hidden md:inline-block px-1.5 py-0.2 rounded bg-indigo-700/60 text-[10px] text-indigo-200">
-              N
-            </kbd>
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add</span>
           </button>
         </div>
       </div>

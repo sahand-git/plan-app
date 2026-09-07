@@ -1,119 +1,215 @@
-import { useState } from 'react';
-import { db, type Task } from './db';
+﻿import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, type Task, type TreeState, type Priority } from './db';
 import { Navbar, type AppView } from './components/Navbar';
-import { DailyTasksView } from './components/DailyTasksView';
+import { BottomNavbar } from './components/BottomNavbar';
+import { CalmHomeScreen } from './components/home/CalmHomeScreen';
+import { LockedJournalView } from './components/journal/LockedJournalView';
 import { CalendarView } from './components/CalendarView';
-import { JournalView } from './components/JournalView';
-import { HabitTrackerView } from './components/HabitTrackerView';
 import { DataManagementView } from './components/DataManagementView';
-import { TaskModal } from './components/TaskModal';
+import { CalmOnboardingModal } from './components/onboarding/CalmOnboardingModal';
+import { PlatformShell, type PlatformMode } from './components/mockups/PlatformShell';
+import { OneGestureAdd } from './components/tasks/OneGestureAdd';
 import { useTheme } from './hooks/useTheme';
-import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 import { getTodayString } from './utils/date';
 
 export function App() {
   const { theme, setTheme, toggleTheme } = useTheme();
   const [currentView, setCurrentView] = useState<AppView>('tasks');
   const [currentDate, setCurrentDate] = useState<string>(getTodayString());
-  
-  // Task Modal state
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [platformMode, setPlatformMode] = useState<PlatformMode>('ios');
+  const [noPressureMode, setNoPressureMode] = useState<boolean>(() => {
+    return localStorage.getItem('treeplanner_nopressure') === 'true';
+  });
 
-  // Global shortcut 'n' to open new task modal
-  useKeyboardShortcut('n', () => {
-    setEditingTask(null);
-    setIsTaskModalOpen(true);
-  }, !isTaskModalOpen);
+  // Botanical Tree State: 'seedling' | 'sapling' | 'foliage' | 'flourishing' | 'gentle_wilt'
+  const [treeState, setTreeState] = useState<TreeState>(() => {
+    return (localStorage.getItem('treeplanner_tree_state') as TreeState) || 'foliage';
+  });
 
-  const handleOpenNewTask = () => {
-    setEditingTask(null);
-    setIsTaskModalOpen(true);
+  // Onboarding state
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
+    return localStorage.getItem('treeplanner_onboarded') !== 'true';
+  });
+
+  // Global Add Modal state
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+
+  // Queries
+  const tasks = useLiveQuery(
+    () => db.tasks.where('date').equals(currentDate).toArray(),
+    [currentDate]
+  ) || [];
+
+  const habits = useLiveQuery(() => db.habits.where('archived').notEqual(1).toArray()) || [];
+  const habitLogsList = useLiveQuery(() => db.habitLogs.toArray()) || [];
+  const recentTreeLogs = useLiveQuery(() => db.treeLogs.toArray()) || [];
+
+  // Map habit logs into { [habitId]: { [date]: boolean } }
+  const habitLogsMap: Record<number, Record<string, boolean>> = {};
+  for (const log of habitLogsList) {
+    if (!habitLogsMap[log.habitId]) {
+      habitLogsMap[log.habitId] = {};
+    }
+    habitLogsMap[log.habitId][log.date] = log.completed;
+  }
+
+  // Handle Tree State changes
+  const handleSetTreeState = (state: TreeState) => {
+    setTreeState(state);
+    localStorage.setItem('treeplanner_tree_state', state);
   };
 
-  const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setIsTaskModalOpen(true);
+  // Toggle No-Pressure Mode
+  const handleToggleNoPressure = () => {
+    setNoPressureMode((prev) => {
+      const next = !prev;
+      localStorage.setItem('treeplanner_nopressure', String(next));
+      return next;
+    });
   };
 
-  const handleSaveTask = async (taskData: Omit<Task, 'id' | 'createdAt'>) => {
-    if (editingTask?.id) {
-      await db.tasks.update(editingTask.id, {
-        ...taskData,
+  // Task Operations
+  const handleAddTask = async (title: string, priority?: Priority, time?: string) => {
+    await db.tasks.add({
+      title,
+      date: currentDate,
+      completed: false,
+      priority: priority || 'med',
+      time,
+      createdAt: new Date().toISOString(),
+    });
+  };
+
+  const handleToggleTask = async (task: Task) => {
+    if (!task.id) return;
+    await db.tasks.update(task.id, {
+      completed: !task.completed,
+      completedAt: !task.completed ? new Date().toISOString() : undefined,
+    });
+  };
+
+  const handleDeleteTask = async (id: number) => {
+    await db.tasks.delete(id);
+  };
+
+  // Habit Operations
+  const handleAddHabit = async (title: string) => {
+    await db.habits.add({
+      title,
+      createdAt: new Date().toISOString(),
+      targetDays: [],
+    });
+  };
+
+  const handleToggleHabit = async (habitId: number) => {
+    const existing = await db.habitLogs
+      .where('[habitId+date]')
+      .equals([habitId, currentDate])
+      .first();
+
+    if (existing && existing.id) {
+      await db.habitLogs.update(existing.id, {
+        completed: !existing.completed,
       });
     } else {
-      await db.tasks.add({
-        ...taskData,
-        createdAt: new Date().toISOString(),
+      await db.habitLogs.add({
+        habitId,
+        date: currentDate,
+        completed: true,
       });
     }
   };
 
+  const hasJournalLock = !!localStorage.getItem('treeplanner_journal_pin');
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <PlatformShell
+      platformMode={platformMode}
+      onSelectPlatform={setPlatformMode}
+      isDark={theme === 'dark'}
+      onToggleTheme={toggleTheme}
+      noPressureMode={noPressureMode}
+      onToggleNoPressure={handleToggleNoPressure}
+    >
+      {/* Platform Header */}
       <Navbar
         currentView={currentView}
-        onSelectView={setCurrentView}
-        onOpenNewTask={handleOpenNewTask}
-        theme={theme}
-        onToggleTheme={toggleTheme}
+        onOpenNewTask={() => setIsQuickAddOpen(true)}
       />
 
-      <main className="flex-1 pb-16">
+      {/* Main Viewport */}
+      <main className="flex-1 flex flex-col pt-4">
         {currentView === 'tasks' && (
-          <DailyTasksView
+          <CalmHomeScreen
             currentDate={currentDate}
-            onSelectDate={setCurrentDate}
-            onOpenNewTask={handleOpenNewTask}
-            onEditTask={handleEditTask}
-          />
-        )}
-
-        {currentView === 'calendar' && (
-          <CalendarView
-            currentDate={currentDate}
-            onSelectDate={setCurrentDate}
-            onJumpToDayTasks={(date) => {
-              setCurrentDate(date);
-              setCurrentView('tasks');
-            }}
+            tasks={tasks}
+            habits={habits}
+            habitLogs={habitLogsMap}
+            treeState={treeState}
+            onSetTreeState={handleSetTreeState}
+            onAddTask={handleAddTask}
+            onToggleTask={handleToggleTask}
+            onDeleteTask={handleDeleteTask}
+            onAddHabit={handleAddHabit}
+            onToggleHabit={handleToggleHabit}
+            noPressureMode={noPressureMode}
+            recentTreeLogs={recentTreeLogs}
           />
         )}
 
         {currentView === 'notes' && (
-          <JournalView
+          <LockedJournalView
             currentDate={currentDate}
             onSelectDate={setCurrentDate}
           />
         )}
 
-        {currentView === 'habits' && (
-          <HabitTrackerView
-            currentDate={currentDate}
-            onSelectDate={setCurrentDate}
-          />
+        {currentView === 'calendar' && (
+          <div className="px-3 pb-24">
+            <CalendarView
+              currentDate={currentDate}
+              onSelectDate={setCurrentDate}
+              onJumpToDayTasks={(date) => {
+                setCurrentDate(date);
+                setCurrentView('tasks');
+              }}
+            />
+          </div>
         )}
 
         {currentView === 'data' && (
           <DataManagementView
             theme={theme}
             onSetTheme={setTheme}
+            noPressureMode={noPressureMode}
+            onToggleNoPressure={handleToggleNoPressure}
           />
         )}
       </main>
 
-      {/* Task Creation & Editing Modal */}
-      <TaskModal
-        isOpen={isTaskModalOpen}
-        onClose={() => {
-          setIsTaskModalOpen(false);
-          setEditingTask(null);
-        }}
-        onSave={handleSaveTask}
-        initialTask={editingTask}
-        defaultDate={currentDate}
+      {/* Bottom Navigation */}
+      <BottomNavbar
+        currentView={currentView}
+        onSelectView={setCurrentView}
+        platformMode={platformMode}
+        hasJournalLock={hasJournalLock}
       />
-    </div>
+
+      {/* Global Quick Add Modal */}
+      <OneGestureAdd
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        onAddTask={handleAddTask}
+        onAddHabit={handleAddHabit}
+      />
+
+      {/* Onboarding for first run */}
+      <CalmOnboardingModal
+        isOpen={showOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+      />
+    </PlatformShell>
   );
 }
 
