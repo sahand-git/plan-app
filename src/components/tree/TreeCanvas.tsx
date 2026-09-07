@@ -10,31 +10,29 @@ import { Anchor, Disc, Eye, Flower2 } from 'lucide-react';
 export type TreeViewPerspective = 'canopy' | 'roots' | 'rings';
 
 interface TreeCanvasProps {
-  state: TreeState;
+  lifecycleStage?: TreeLifecycleStage;
+  isDimmed?: boolean;
+  state?: TreeState;
   onTapTree?: () => void;
-  showInspector?: boolean;
-  onSelectState?: (state: TreeState) => void;
   size?: 'sm' | 'md' | 'lg';
   journalCount?: number;
   recentNotes?: DailyNote[];
   totalWeeksAccumulated?: number;
   speciesId?: string;
-  lifecycleStage?: TreeLifecycleStage;
   onOpenGarden?: () => void;
   lang?: AppLanguage;
 }
 
 export const TreeCanvas: React.FC<TreeCanvasProps> = ({
+  lifecycleStage = 'mature',
+  isDimmed = false,
   state,
   onTapTree,
-  showInspector = false,
-  onSelectState,
   size = 'md',
   journalCount = 4,
   recentNotes = [],
   totalWeeksAccumulated = 12,
   speciesId = 'noble_pine',
-  lifecycleStage = 'mature',
   onOpenGarden,
   lang = 'en',
 }) => {
@@ -48,22 +46,25 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
   }[size];
 
   const species = SPECIES_CATALOG[speciesId] || SPECIES_CATALOG.noble_pine;
-  const isDimmed = state === 'gentle_wilt';
+  const effectiveDimmed = isDimmed || state === 'gentle_wilt';
   const effectiveStage: TreeLifecycleStage =
-    state === 'seedling' ? 'seed' : state === 'sapling' ? 'sapling' : lifecycleStage;
+    lifecycleStage || (state === 'seedling' ? 'seed' : state === 'sapling' ? 'sapling' : 'mature');
 
   const localizedSpeciesName = lang === 'ckb' ? species.kurdishName : species.name;
 
-  const stateLabels: Record<TreeState, { title: string; subtitle: string }> = {
-    seedling: { title: t.tree.seed, subtitle: 'Rooted and beginning' },
-    sapling: { title: t.tree.sapling, subtitle: 'Reaching with steady ease' },
-    foliage: { title: `${localizedSpeciesName} (Balanced)`, subtitle: 'Harmonious weekly rhythm' },
-    flourishing: { title: `${localizedSpeciesName} (${t.tree.mature})`, subtitle: 'Full, vibrant presence' },
-    gentle_wilt: {
-      title: t.tree.dimmedNeglectTitle,
-      subtitle: t.tree.dimmedNeglectSubtitle,
-    },
-  };
+  let title = localizedSpeciesName;
+  let subtitle = 'Full, vibrant presence';
+
+  if (effectiveDimmed) {
+    title = t.tree.dimmedNeglectTitle;
+    subtitle = t.tree.dimmedNeglectSubtitle;
+  } else if (effectiveStage === 'seed') {
+    title = t.tree.seed;
+    subtitle = 'Rooted and beginning';
+  } else if (effectiveStage === 'sapling') {
+    title = t.tree.sapling;
+    subtitle = 'Reaching with steady ease';
+  }
 
   // If user selected Underground View
   if (perspective === 'roots') {
@@ -95,7 +96,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
         onClick={onTapTree}
         role="button"
         tabIndex={0}
-        aria-label={`Botanical Tree: ${stateLabels[state].title}. Tap for weekly reflection.`}
+        aria-label={`Botanical Tree: ${title}. Tap for weekly reflection.`}
         className={`relative ${sizeClasses} cursor-pointer group flex items-center justify-center transition-transform duration-700 ease-out active:scale-95`}
       >
         {/* Soft Organic Aura */}
@@ -106,7 +107,7 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
           <ProceduralTreeRenderer
             speciesId={speciesId}
             stage={effectiveStage}
-            isDimmed={isDimmed}
+            isDimmed={effectiveDimmed}
             journalCount={journalCount}
           />
         </div>
@@ -122,10 +123,10 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
       {/* Glanceable Botanical State Subtitle */}
       <div className="mt-1 text-center">
         <p className="text-sm font-serif font-medium text-stone-800 dark:text-stone-200 tracking-wide">
-          {stateLabels[state].title}
+          {title}
         </p>
         <p className="text-xs text-stone-400 dark:text-stone-400 mt-0.5 font-light">
-          {stateLabels[state].subtitle}
+          {subtitle}
         </p>
       </div>
 
@@ -172,25 +173,6 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
           </button>
         )}
       </div>
-
-      {/* State Inspector for manual QA */}
-      {showInspector && onSelectState && (
-        <div className="mt-3 flex flex-wrap justify-center gap-1 p-1 bg-stone-100/80 dark:bg-night-surface/80 rounded-2xl border border-stone-200/60 dark:border-night-border">
-          {(['flourishing', 'foliage', 'sapling', 'seedling', 'gentle_wilt'] as TreeState[]).map((s) => (
-            <button
-              key={s}
-              onClick={() => onSelectState(s)}
-              className={`text-xs px-2.5 py-1 rounded-xl transition-all font-medium ${
-                state === s
-                  ? 'bg-sage-600 text-white shadow-xs'
-                  : 'text-stone-600 dark:text-stone-300 hover:bg-stone-200/60 dark:hover:bg-night-card'
-              }`}
-            >
-              {s === 'gentle_wilt' ? 'Wilt (Dimmed)' : s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

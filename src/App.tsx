@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, seedInitialGardenTreesIfEmpty, type Task, type TreeState, type Priority, type GardenTree } from './db';
+import {
+  db,
+  seedInitialGardenTreesIfEmpty,
+  calculateIsDimmedNeglect,
+  type Task,
+  type Priority,
+  type GardenTree,
+} from './db';
 import { Navbar, type AppView } from './components/Navbar';
 import { BottomNavbar } from './components/BottomNavbar';
 import { CalmHomeScreen } from './components/home/CalmHomeScreen';
@@ -16,13 +23,14 @@ import { PlatformShell, type PlatformMode } from './components/mockups/PlatformS
 import { OneGestureAdd } from './components/tasks/OneGestureAdd';
 import { useTheme } from './hooks/useTheme';
 import { getTodayString } from './utils/date';
-import { getInitialLanguage, saveLanguage, type AppLanguage } from './utils/i18n';
+import { getInitialLanguage, saveLanguage, isRtl, type AppLanguage } from './utils/i18n';
+import { Languages, Sparkles, Sun, Moon } from 'lucide-react';
 
 export function App() {
   const { theme, setTheme, toggleTheme } = useTheme();
   const [currentView, setCurrentView] = useState<AppView>('tasks');
   const [currentDate, setCurrentDate] = useState<string>(getTodayString());
-  const [platformMode, setPlatformMode] = useState<PlatformMode>('ios');
+  const [previewPlatform, setPreviewPlatform] = useState<PlatformMode>('ios');
   const [noPressureMode, setNoPressureMode] = useState<boolean>(() => {
     return localStorage.getItem('treeplanner_nopressure') === 'true';
   });
@@ -35,11 +43,6 @@ export function App() {
   const [isRecapModalOpen, setIsRecapModalOpen] = useState(false);
   const [isContextualNotifOpen, setIsContextualNotifOpen] = useState(false);
 
-  // Botanical Tree State: 'seedling' | 'sapling' | 'foliage' | 'flourishing' | 'gentle_wilt'
-  const [treeState, setTreeState] = useState<TreeState>(() => {
-    return (localStorage.getItem('treeplanner_tree_state') as TreeState) || 'foliage';
-  });
-
   // Onboarding state
   const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
     return localStorage.getItem('treeplanner_onboarded') !== 'true';
@@ -48,20 +51,13 @@ export function App() {
   // Global Add Modal state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
+  // Optional desktop preview mode via URL parameter (e.g. ?preview=true)
+  const isPreview = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === 'true';
+
   // Seed sample grove data on first visit
   useEffect(() => {
     seedInitialGardenTreesIfEmpty();
   }, []);
-
-  // Contextual notification prompt: triggered strictly upon tree neglect (gentle_wilt), never on onboarding
-  useEffect(() => {
-    if (treeState === 'gentle_wilt') {
-      const alreadyAsked = localStorage.getItem('treeplanner_contextual_notif_asked') === 'true';
-      if (!alreadyAsked) {
-        setIsContextualNotifOpen(true);
-      }
-    }
-  }, [treeState]);
 
   // Queries
   const tasks = useLiveQuery(
@@ -74,7 +70,8 @@ export function App() {
   const recentTreeLogs = useLiveQuery(() => db.treeLogs.toArray()) || [];
   const notes = useLiveQuery(() => db.notes.toArray()) || [];
   const gardenTrees = useLiveQuery(() => db.gardenTrees.toArray()) || [];
-  const activeTree: GardenTree | undefined = gardenTrees.find((t) => t.status === 'growing') || gardenTrees[0];
+  const activeTree: GardenTree | undefined =
+    gardenTrees.find((t) => t.isActive === 1 || t.status === 'growing') || gardenTrees[0];
 
   // Map habit logs into { [habitId]: { [date]: boolean } }
   const habitLogsMap: Record<number, Record<string, boolean>> = {};
@@ -85,11 +82,18 @@ export function App() {
     habitLogsMap[log.habitId][log.date] = log.completed;
   }
 
-  // Handle Tree State changes
-  const handleSetTreeState = (state: TreeState) => {
-    setTreeState(state);
-    localStorage.setItem('treeplanner_tree_state', state);
-  };
+  // Automatic Inactivity / Neglect calculation from database records
+  const isDimmed = calculateIsDimmedNeglect(tasks, habits, habitLogsMap, currentDate, recentTreeLogs);
+
+  // Contextual notification prompt: triggered strictly upon tree neglect (gentle rest), never on onboarding
+  useEffect(() => {
+    if (isDimmed) {
+      const alreadyAsked = localStorage.getItem('treeplanner_contextual_notif_asked') === 'true';
+      if (!alreadyAsked) {
+        setIsContextualNotifOpen(true);
+      }
+    }
+  }, [isDimmed]);
 
   // Toggle No-Pressure Mode
   const handleToggleNoPressure = () => {
@@ -160,19 +164,60 @@ export function App() {
   };
 
   const hasJournalLock = !!localStorage.getItem('treeplanner_journal_pin');
+  const rtl = isRtl(lang);
 
-  return (
-    <PlatformShell
-      platformMode={platformMode}
-      onSelectPlatform={setPlatformMode}
-      isDark={theme === 'dark'}
-      onToggleTheme={toggleTheme}
-      noPressureMode={noPressureMode}
-      onToggleNoPressure={handleToggleNoPressure}
-      lang={lang}
-      onToggleLang={handleToggleLang}
+  const appContent = (
+    <div
+      dir={rtl ? 'rtl' : 'ltr'}
+      className={`w-full min-h-dvh flex flex-col bg-parchment text-stone-800 dark:bg-night-bg dark:text-stone-100 safe-pt safe-pb safe-pl safe-pr transition-colors duration-500 overflow-x-hidden ${
+        rtl ? 'font-sans text-right' : ''
+      }`}
     >
-      {/* Platform Header */}
+      {/* Top Serene Header with Language, Zen Mode & Theme Controls */}
+      <header className="sticky top-0 z-30 w-full max-w-md mx-auto px-4 py-2 flex items-center justify-between text-xs bg-parchment/85 dark:bg-night-bg/85 backdrop-blur-xl border-b border-stone-200/50 dark:border-night-border/70">
+        <div className="flex items-center gap-2">
+          <span className="font-serif font-medium text-stone-800 dark:text-stone-100 text-sm tracking-wide">
+            The Tree Planner
+          </span>
+          <span className="px-2 py-0.5 rounded-full bg-sage-100/80 dark:bg-night-card text-sage-700 dark:text-sage-300 text-[10px] font-medium">
+            v1.0
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleToggleLang}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-medium border border-stone-200/70 dark:border-night-border bg-stone-100/70 dark:bg-night-card text-stone-700 dark:text-stone-300 hover:bg-stone-200/60 transition-all shadow-xs"
+            title="Toggle Language: English / کوردی سۆرانی"
+          >
+            <Languages className="w-3.5 h-3.5 text-sage-600" />
+            <span>{lang === 'ckb' ? 'کوردی' : 'English'}</span>
+          </button>
+
+          <button
+            onClick={handleToggleNoPressure}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] transition-all border ${
+              noPressureMode
+                ? 'bg-sage-100 dark:bg-sage-950/60 border-sage-300 dark:border-sage-800 text-sage-800 dark:text-sage-200 font-medium'
+                : 'bg-transparent border-transparent text-stone-500 hover:bg-stone-200/50 dark:hover:bg-night-card'
+            }`}
+            title="Toggle No-Pressure Mode"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{noPressureMode ? 'Zen' : 'Calm'}</span>
+          </button>
+
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-xl text-stone-500 hover:bg-stone-200/60 dark:hover:bg-night-card transition-colors"
+            title="Toggle Dark / Light Theme"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+          </button>
+        </div>
+      </header>
+
+      {/* Platform Sub-Header */}
       <Navbar
         currentView={currentView}
         onOpenNewTask={() => setIsQuickAddOpen(true)}
@@ -180,15 +225,13 @@ export function App() {
       />
 
       {/* Main Viewport */}
-      <main className="flex-1 flex flex-col pt-4">
+      <main className="flex-1 flex flex-col pt-2 pb-24 w-full max-w-md mx-auto">
         {currentView === 'tasks' && (
           <CalmHomeScreen
             currentDate={currentDate}
             tasks={tasks}
             habits={habits}
             habitLogs={habitLogsMap}
-            treeState={treeState}
-            onSetTreeState={handleSetTreeState}
             onAddTask={handleAddTask}
             onToggleTask={handleToggleTask}
             onDeleteTask={handleDeleteTask}
@@ -200,6 +243,7 @@ export function App() {
             recentNotes={notes}
             speciesId={activeTree?.speciesId || 'noble_pine'}
             lifecycleStage={activeTree?.lifecycleStage || 'mature'}
+            isDimmed={isDimmed}
             lang={lang}
             onOpenGarden={() => setCurrentView('garden')}
           />
@@ -247,7 +291,6 @@ export function App() {
             onSetTheme={setTheme}
             noPressureMode={noPressureMode}
             onToggleNoPressure={handleToggleNoPressure}
-            treeState={treeState}
             speciesId={activeTree?.speciesId || 'noble_pine'}
             lifecycleStage={activeTree?.lifecycleStage || 'mature'}
             journalCount={notes.length}
@@ -261,7 +304,6 @@ export function App() {
       <BottomNavbar
         currentView={currentView}
         onSelectView={setCurrentView}
-        platformMode={platformMode}
         hasJournalLock={hasJournalLock}
         lang={lang}
       />
@@ -306,14 +348,35 @@ export function App() {
         }}
       />
 
-      {/* Contextual Notification Permission Modal (Gentle Wilt only) */}
+      {/* Contextual Notification Permission Modal (Gentle Rest only) */}
       <ContextualNotificationModal
         isOpen={isContextualNotifOpen}
         onClose={() => setIsContextualNotifOpen(false)}
         lang={lang}
       />
-    </PlatformShell>
+    </div>
   );
+
+  // If preview mode is requested via URL parameter (?preview=true), wrap in PlatformShell
+  if (isPreview) {
+    return (
+      <PlatformShell
+        platformMode={previewPlatform}
+        onSelectPlatform={setPreviewPlatform}
+        isDark={theme === 'dark'}
+        onToggleTheme={toggleTheme}
+        noPressureMode={noPressureMode}
+        onToggleNoPressure={handleToggleNoPressure}
+        lang={lang}
+        onToggleLang={handleToggleLang}
+      >
+        {appContent}
+      </PlatformShell>
+    );
+  }
+
+  // Shipped Full-Bleed Edge-to-Edge Experience
+  return appContent;
 }
 
 export default App;

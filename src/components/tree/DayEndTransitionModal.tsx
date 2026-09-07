@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React from 'react';
 import { Sparkles, ArrowRight, Sunset } from 'lucide-react';
 import type { TreeState } from '../../db';
 
@@ -48,8 +48,6 @@ export const DayEndTransitionModal: React.FC<DayEndTransitionModalProps> = ({
     stateTitle = 'Young Sapling';
     message = 'Tender steps were taken. The branches stretch gently for tomorrow’s light.';
   }
-
-  const [selectedScenario, setSelectedScenario] = useState<TreeState>(projectedState);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-md animate-soft-fade-up">
@@ -101,27 +99,6 @@ export const DayEndTransitionModal: React.FC<DayEndTransitionModalProps> = ({
           </div>
         </div>
 
-        <div className="space-y-2">
-          <span className="text-xs text-stone-400 font-medium block">
-            Test Tomorrow's Morning Posture:
-          </span>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-            {(['flourishing', 'foliage', 'sapling', 'seedling', 'gentle_wilt'] as TreeState[]).map((st) => (
-              <button
-                key={st}
-                onClick={() => setSelectedScenario(st)}
-                className={`py-2 px-1 text-xs rounded-xl border text-center transition-all ${
-                  selectedScenario === st
-                    ? 'bg-sage-600 text-white border-sage-600 shadow-sm font-medium'
-                    : 'bg-white dark:bg-night-card border-stone-200 dark:border-night-border text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-night-border'
-                }`}
-              >
-                {st === 'gentle_wilt' ? 'Wilt (Rest)' : st.charAt(0).toUpperCase() + st.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="flex items-center gap-3 pt-2">
           <button
             onClick={onClose}
@@ -131,7 +108,7 @@ export const DayEndTransitionModal: React.FC<DayEndTransitionModalProps> = ({
           </button>
           <button
             onClick={() => {
-              onApplyTransition(selectedScenario);
+              onApplyTransition(projectedState);
               onClose();
             }}
             className="flex-1 py-3 px-4 rounded-2xl bg-sage-600 hover:bg-sage-700 active:scale-[0.99] text-white font-medium text-sm transition-all shadow-sm flex items-center justify-center gap-2"

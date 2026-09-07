@@ -69,6 +69,7 @@ export interface GardenTree {
   cycleStart: string; // YYYY-MM-DD
   cycleEnd: string; // YYYY-MM-DD
   status: 'mature' | 'growing';
+  isActive?: number; // 1 = currently active growing tree, 0 = past matured tree
   lifecycleStage: TreeLifecycleStage;
   daysTended: number;
   journalCount: number;
@@ -108,7 +109,7 @@ export class PlannerDatabase extends Dexie {
       habits: '++id, createdAt, archived',
       habitLogs: '++id, habitId, date, [habitId+date]',
       treeLogs: '++id, &date, state, recordedAt',
-      gardenTrees: '++id, speciesId, cycleStart, status, completedAt',
+      gardenTrees: '++id, speciesId, cycleStart, status, isActive, completedAt',
       settings: 'key',
     });
   }
@@ -200,10 +201,72 @@ export async function setSetting<T>(key: string, value: T): Promise<void> {
 }
 
 /**
+ * Calculates tree lifecycle stage automatically from cumulative completion data:
+ * - Starts as 'seed' on day 1 / initial stage
+ * - Advances to 'sapling' once 3+ actions completed or 2+ days tended
+ * - Advances to 'mature' once 12+ actions completed or 5+ days tended
+ */
+export function calculateLifecycleStage(
+  daysTended: number,
+  totalActions: number
+): TreeLifecycleStage {
+  if (totalActions >= 12 || daysTended >= 5) {
+    return 'mature';
+  }
+  if (totalActions >= 3 || daysTended >= 2) {
+    return 'sapling';
+  }
+  return 'seed';
+}
+
+/**
+ * Determines whether the active tree enters dimmed rest due to 2+ days of inactivity.
+ * Checks the last 2 consecutive calendar days (e.g. today and yesterday).
+ * If both days had zero completed tasks and zero completed habits, tree enters gentle dimmed rest.
+ */
+export function calculateIsDimmedNeglect(
+  tasks: Task[],
+  habits: Habit[],
+  habitLogsMap: Record<number, Record<string, boolean>>,
+  currentDateStr: string,
+  treeLogs: TreeDayLog[]
+): boolean {
+  // Check today's completions
+  const todayTasksCompleted = tasks.filter((t) => t.completed).length;
+  const todayHabitsCompleted = habits.filter(
+    (h) => h.id && habitLogsMap[h.id]?.[currentDateStr]
+  ).length;
+  const todayTotalCompleted = todayTasksCompleted + todayHabitsCompleted;
+
+  if (todayTotalCompleted > 0) {
+    return false; // Actively tended today, so not dimmed
+  }
+
+  // Today has 0 completions. Check yesterday:
+  const cur = new Date(currentDateStr);
+  cur.setDate(cur.getDate() - 1);
+  const yesterdayStr = cur.toISOString().split('T')[0];
+
+  const yesterdayLog = treeLogs.find((l) => l.date === yesterdayStr);
+  let yesterdayCompleted = 0;
+  if (yesterdayLog) {
+    yesterdayCompleted = yesterdayLog.tasksCompleted + yesterdayLog.habitsCompleted;
+  } else {
+    yesterdayCompleted = habits.filter(
+      (h) => h.id && habitLogsMap[h.id]?.[yesterdayStr]
+    ).length;
+  }
+
+  return yesterdayCompleted === 0;
+}
+
+/**
  * Get or initialize current active growing tree
  */
 export async function getActiveTree(): Promise<GardenTree> {
-  const active = await db.gardenTrees.where('status').equals('growing').first();
+  const active = await db.gardenTrees
+    .filter((t) => t.isActive === 1 || t.status === 'growing')
+    .first();
   if (active) return active;
 
   // Initialize fresh seedling tree
@@ -214,6 +277,7 @@ export async function getActiveTree(): Promise<GardenTree> {
     cycleStart: today,
     cycleEnd: today,
     status: 'growing',
+    isActive: 1,
     lifecycleStage: 'seed',
     daysTended: 1,
     journalCount: 0,
@@ -236,7 +300,7 @@ export async function matureCurrentTree(
 ): Promise<{ maturedTree: GardenTree; newSeed: GardenTree }> {
   const now = new Date();
   const today = now.toISOString().split('T')[0];
-  
+
   const existing = await db.gardenTrees.get(treeId);
   const matured: GardenTree = {
     ...(existing || {}),
@@ -245,6 +309,7 @@ export async function matureCurrentTree(
     cycleStart: existing?.cycleStart || today,
     cycleEnd: today,
     status: 'mature',
+    isActive: 0,
     lifecycleStage: 'mature',
     earnedReason,
     completedAt: now.toISOString(),
@@ -262,6 +327,7 @@ export async function matureCurrentTree(
     cycleStart: today,
     cycleEnd: today,
     status: 'growing',
+    isActive: 1,
     lifecycleStage: 'seed',
     daysTended: 1,
     journalCount: 0,
@@ -287,6 +353,7 @@ export async function seedInitialGardenTreesIfEmpty(): Promise<void> {
       cycleStart: '2026-07-01',
       cycleEnd: '2026-07-21',
       status: 'growing',
+      isActive: 1,
       lifecycleStage: 'mature',
       daysTended: 14,
       journalCount: 6,
@@ -300,6 +367,7 @@ export async function seedInitialGardenTreesIfEmpty(): Promise<void> {
       cycleStart: '2026-06-01',
       cycleEnd: '2026-06-21',
       status: 'mature',
+      isActive: 0,
       lifecycleStage: 'mature',
       daysTended: 21,
       journalCount: 9,
@@ -314,6 +382,7 @@ export async function seedInitialGardenTreesIfEmpty(): Promise<void> {
       cycleStart: '2026-05-01',
       cycleEnd: '2026-05-28',
       status: 'mature',
+      isActive: 0,
       lifecycleStage: 'mature',
       daysTended: 28,
       journalCount: 14,
@@ -328,6 +397,7 @@ export async function seedInitialGardenTreesIfEmpty(): Promise<void> {
       cycleStart: '2026-04-05',
       cycleEnd: '2026-04-26',
       status: 'mature',
+      isActive: 0,
       lifecycleStage: 'mature',
       daysTended: 21,
       journalCount: 5,
@@ -342,6 +412,7 @@ export async function seedInitialGardenTreesIfEmpty(): Promise<void> {
       cycleStart: '2026-03-01',
       cycleEnd: '2026-03-21',
       status: 'mature',
+      isActive: 0,
       lifecycleStage: 'mature',
       daysTended: 21,
       journalCount: 12,
@@ -356,6 +427,7 @@ export async function seedInitialGardenTreesIfEmpty(): Promise<void> {
       cycleStart: '2026-02-01',
       cycleEnd: '2026-02-22',
       status: 'mature',
+      isActive: 0,
       lifecycleStage: 'mature',
       daysTended: 18,
       journalCount: 8,

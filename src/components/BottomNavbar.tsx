@@ -6,7 +6,7 @@ import { translations, type AppLanguage } from '../utils/i18n';
 interface BottomNavbarProps {
   currentView: AppView;
   onSelectView: (view: AppView) => void;
-  platformMode: 'ios' | 'android' | 'responsive';
+  platformMode?: 'ios' | 'android' | 'responsive';
   hasJournalLock?: boolean;
   lang?: AppLanguage;
 }

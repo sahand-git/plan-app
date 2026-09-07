@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Moon, SlidersHorizontal } from 'lucide-react';
+import { Plus, Moon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { TreeCanvas } from '../tree/TreeCanvas';
 import { TreeStatsModal } from '../tree/TreeStatsModal';
@@ -15,8 +15,8 @@ interface CalmHomeScreenProps {
   tasks: Task[];
   habits: Habit[];
   habitLogs: Record<number, Record<string, boolean>>; // habitId -> date -> boolean
-  treeState: TreeState;
-  onSetTreeState: (state: TreeState) => void;
+  treeState?: TreeState;
+  onSetTreeState?: (state: TreeState) => void;
   onAddTask: (title: string, priority?: Priority, time?: string) => Promise<void>;
   onToggleTask: (task: Task) => void;
   onDeleteTask: (id: number) => void;
@@ -29,6 +29,7 @@ interface CalmHomeScreenProps {
   totalWeeksAccumulated?: number;
   speciesId?: string;
   lifecycleStage?: TreeLifecycleStage;
+  isDimmed?: boolean;
   lang?: AppLanguage;
   onOpenGarden?: () => void;
 }
@@ -38,7 +39,7 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
   tasks,
   habits,
   habitLogs,
-  treeState,
+  treeState = 'foliage',
   onSetTreeState,
   onAddTask,
   onToggleTask,
@@ -52,6 +53,7 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
   totalWeeksAccumulated = 12,
   speciesId = 'noble_pine',
   lifecycleStage = 'mature',
+  isDimmed = false,
   lang = 'en',
   onOpenGarden,
 }) => {
@@ -59,7 +61,6 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showDayEndModal, setShowDayEndModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showStateInspector, setShowStateInspector] = useState(false);
 
   // 7-day week calculation
   const weekDates = [0, 1, 2, 3, 4, 5, 6].map((offset) => {
@@ -109,28 +110,18 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
       {/* The Botanical Tree Stage (Core Plant Mirror) */}
       <div className="flex flex-col items-center justify-center py-2 relative">
         <TreeCanvas
+          lifecycleStage={lifecycleStage}
+          isDimmed={isDimmed}
           state={treeState}
           onTapTree={() => setShowStatsModal(true)}
-          showInspector={showStateInspector}
-          onSelectState={onSetTreeState}
           size="md"
           journalCount={journalCount}
           recentNotes={recentNotes}
           totalWeeksAccumulated={totalWeeksAccumulated}
           speciesId={speciesId}
-          lifecycleStage={lifecycleStage}
           onOpenGarden={onOpenGarden}
           lang={lang}
         />
-
-        {/* Quick Inspector Toggle Button (Subtle, for reviewers/users) */}
-        <button
-          onClick={() => setShowStateInspector(!showStateInspector)}
-          className="mt-2 text-[11px] text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 flex items-center gap-1 transition-colors"
-        >
-          <SlidersHorizontal className="w-3 h-3" />
-          <span>{showStateInspector ? 'Hide Tree States' : 'Explore Botanical States'}</span>
-        </button>
       </div>
 
       {/* One-Gesture Quick Task Add (Serene Whisper Bar) */}
@@ -240,7 +231,7 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
         tasksTotal={tasksTotal}
         habitsCompleted={todayHabitsCompleted}
         habitsTotal={habitsTotal}
-        onApplyTransition={(nextState) => onSetTreeState(nextState)}
+        onApplyTransition={(nextState) => onSetTreeState?.(nextState)}
       />
 
       <OneGestureAdd
