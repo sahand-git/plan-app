@@ -11,11 +11,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'DayFlow Planner',
-        short_name: 'DayFlow',
-        description: 'Clean, offline-first daily planner, habit tracker, and journal',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        name: 'The Tree Planner',
+        short_name: 'TreePlanner',
+        description: 'A calm, minimalist mobile daily planner and habit tracker for iOS and Android',
+        theme_color: '#F7F5F0',
+        background_color: '#F7F5F0',
         display: 'standalone',
         orientation: 'portrait',
         icons: [

@@ -65,15 +65,19 @@ jobs:
 
       - name: Prepare Release Artifacts
         run: |
+          cp android/app/build/outputs/apk/release/app-release.apk the-tree-planner.apk
           cp android/app/build/outputs/apk/release/app-release.apk plan-app.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab the-tree-planner.aab
           cp android/app/build/outputs/bundle/release/app-release.aab plan-app.aab
-          ls -lh plan-app.apk plan-app.aab release.keystore
+          ls -lh the-tree-planner.apk the-tree-planner.aab plan-app.apk plan-app.aab release.keystore
 
       - name: Upload Artifacts to Run
         uses: actions/upload-artifact@v4
         with:
           name: android-binaries
           path: |
+            the-tree-planner.apk
+            the-tree-planner.aab
             plan-app.apk
             plan-app.aab
             release.keystore
@@ -82,27 +86,33 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: android-v1.0.0
-          name: "Plan App for Android (APK + Google Play AAB)"
+          tag_name: v1.0.0
+          name: "The Tree Planner — Android Release v1.0.0 (APK + Google Play AAB)"
+          make_latest: true
           body: |
-            # 📱 Plan App — Android Release v1.0.0
+            # 🌿 The Tree Planner — Mobile Release v1.0.0
 
-            ### ⬇️ Download Links
-            - **[📱 Download APK (for direct phone install)](https://github.com/sahand-git/plan-app/releases/download/android-v1.0.0/plan-app.apk)**
-              Download this `.apk` directly onto your Android phone to install and use Plan App natively.
+            A calm, minimalist mobile daily planner and habit tracker for iOS and Android.
+
+            ### ⬇️ Direct Download Links
+            - **[📱 Download The Tree Planner APK (Direct Phone Install)](https://github.com/sahand-git/plan-app/releases/download/v1.0.0/the-tree-planner.apk)**
+              Download this `.apk` file directly onto your Android phone to install and run **The Tree Planner** natively.
             
-            - **[🚀 Download AAB (for Google Play Console)](https://github.com/sahand-git/plan-app/releases/download/android-v1.0.0/plan-app.aab)**
-              Upload this `.aab` (Android App Bundle) directly to [Google Play Console](https://play.google.com/console) to publish on the Google Play Store.
+            - **[📱 Alternative APK Link (plan-app.apk)](https://github.com/sahand-git/plan-app/releases/download/v1.0.0/plan-app.apk)**
+            
+            - **[🚀 Download AAB (Google Play Store Bundle)](https://github.com/sahand-git/plan-app/releases/download/v1.0.0/the-tree-planner.aab)**
+              Upload this `.aab` file directly to the [Google Play Console](https://play.google.com/console) to publish on the Play Store.
 
             ---
 
             ### 🔑 Release Keystore Information
-            If you ever need to sign future updates for Google Play:
             - **Keystore file**: Included as `release.keystore`
             - **Alias**: `planapp`
             - **Store password**: `planapp123`
             - **Key password**: `planapp123`
           files: |
+            the-tree-planner.apk
+            the-tree-planner.aab
             plan-app.apk
             plan-app.aab
             release.keystore
