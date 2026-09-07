@@ -60,6 +60,24 @@ export interface TreeDayLog {
   recordedAt: string; // ISO timestamp
 }
 
+export type TreeLifecycleStage = 'seed' | 'sapling' | 'mature';
+
+export interface GardenTree {
+  id?: number;
+  speciesId: string;
+  speciesName: string;
+  cycleStart: string; // YYYY-MM-DD
+  cycleEnd: string; // YYYY-MM-DD
+  status: 'mature' | 'growing';
+  lifecycleStage: TreeLifecycleStage;
+  daysTended: number;
+  journalCount: number;
+  totalTasks: number;
+  ringsCount: number;
+  earnedReason: string;
+  completedAt?: string; // ISO timestamp
+}
+
 export interface AppSetting {
   key: string;
   value: any;
@@ -71,6 +89,7 @@ export class PlannerDatabase extends Dexie {
   habits!: Table<Habit, number>;
   habitLogs!: Table<HabitLog, number>;
   treeLogs!: Table<TreeDayLog, number>;
+  gardenTrees!: Table<GardenTree, number>;
   settings!: Table<AppSetting, string>;
 
   constructor() {
@@ -81,6 +100,15 @@ export class PlannerDatabase extends Dexie {
       habits: '++id, createdAt, archived',
       habitLogs: '++id, habitId, date, [habitId+date]',
       treeLogs: '++id, &date, state, recordedAt',
+      settings: 'key',
+    });
+    this.version(2).stores({
+      tasks: '++id, date, completed, priority, createdAt',
+      notes: '++id, &date, updatedAt',
+      habits: '++id, createdAt, archived',
+      habitLogs: '++id, habitId, date, [habitId+date]',
+      treeLogs: '++id, &date, state, recordedAt',
+      gardenTrees: '++id, speciesId, cycleStart, status, completedAt',
       settings: 'key',
     });
   }
@@ -169,5 +197,175 @@ export async function getSetting<T>(key: string, defaultValue: T): Promise<T> {
  */
 export async function setSetting<T>(key: string, value: T): Promise<void> {
   await db.settings.put({ key, value });
+}
+
+/**
+ * Get or initialize current active growing tree
+ */
+export async function getActiveTree(): Promise<GardenTree> {
+  const active = await db.gardenTrees.where('status').equals('growing').first();
+  if (active) return active;
+
+  // Initialize fresh seedling tree
+  const today = new Date().toISOString().split('T')[0];
+  const newTree: GardenTree = {
+    speciesId: 'noble_pine',
+    speciesName: 'Noble Pine',
+    cycleStart: today,
+    cycleEnd: today,
+    status: 'growing',
+    lifecycleStage: 'seed',
+    daysTended: 1,
+    journalCount: 0,
+    totalTasks: 0,
+    ringsCount: 1,
+    earnedReason: 'Fresh beginning rooted in unhurried daily presence.',
+  };
+  const id = await db.gardenTrees.add(newTree);
+  return { ...newTree, id };
+}
+
+/**
+ * Mature current tree and plant into permanent garden, then sprout fresh seed
+ */
+export async function matureCurrentTree(
+  treeId: number,
+  speciesId: string,
+  speciesName: string,
+  earnedReason: string
+): Promise<{ maturedTree: GardenTree; newSeed: GardenTree }> {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  
+  const existing = await db.gardenTrees.get(treeId);
+  const matured: GardenTree = {
+    ...(existing || {}),
+    speciesId,
+    speciesName,
+    cycleStart: existing?.cycleStart || today,
+    cycleEnd: today,
+    status: 'mature',
+    lifecycleStage: 'mature',
+    earnedReason,
+    completedAt: now.toISOString(),
+    daysTended: existing?.daysTended || 14,
+    journalCount: existing?.journalCount || 6,
+    totalTasks: existing?.totalTasks || 24,
+    ringsCount: existing?.ringsCount || 2,
+  };
+  await db.gardenTrees.put(matured, treeId);
+
+  // Sprout new seed
+  const newSeed: GardenTree = {
+    speciesId: 'noble_pine',
+    speciesName: 'Noble Pine',
+    cycleStart: today,
+    cycleEnd: today,
+    status: 'growing',
+    lifecycleStage: 'seed',
+    daysTended: 1,
+    journalCount: 0,
+    totalTasks: 0,
+    ringsCount: 1,
+    earnedReason: 'New seedling awaiting gentle care.',
+  };
+  const newId = await db.gardenTrees.add(newSeed);
+  return { maturedTree: matured, newSeed: { ...newSeed, id: newId } };
+}
+
+/**
+ * Seeds initial matured grove and active cycle if table is empty
+ */
+export async function seedInitialGardenTreesIfEmpty(): Promise<void> {
+  const count = await db.gardenTrees.count();
+  if (count > 0) return;
+
+  const initialTrees: GardenTree[] = [
+    {
+      speciesId: 'noble_pine',
+      speciesName: 'Noble Pine',
+      cycleStart: '2026-07-01',
+      cycleEnd: '2026-07-21',
+      status: 'growing',
+      lifecycleStage: 'mature',
+      daysTended: 14,
+      journalCount: 6,
+      totalTasks: 28,
+      ringsCount: 2,
+      earnedReason: 'Earned through unwavering habit practice and steady daily rhythm.',
+    },
+    {
+      speciesId: 'cherry_blossom',
+      speciesName: 'Cherry Blossom',
+      cycleStart: '2026-06-01',
+      cycleEnd: '2026-06-21',
+      status: 'mature',
+      lifecycleStage: 'mature',
+      daysTended: 21,
+      journalCount: 9,
+      totalTasks: 42,
+      ringsCount: 3,
+      earnedReason: 'Unbroken quiet attention through spring bloom.',
+      completedAt: '2026-06-21T20:00:00.000Z',
+    },
+    {
+      speciesId: 'ancient_ginkgo',
+      speciesName: 'Ancient Ginkgo',
+      cycleStart: '2026-05-01',
+      cycleEnd: '2026-05-28',
+      status: 'mature',
+      lifecycleStage: 'mature',
+      daysTended: 28,
+      journalCount: 14,
+      totalTasks: 50,
+      ringsCount: 4,
+      earnedReason: 'Harmonious mastery across tasks, habits, and daily reflection.',
+      completedAt: '2026-05-28T20:00:00.000Z',
+    },
+    {
+      speciesId: 'stone_bonsai',
+      speciesName: 'Stone Bonsai',
+      cycleStart: '2026-04-05',
+      cycleEnd: '2026-04-26',
+      status: 'mature',
+      lifecycleStage: 'mature',
+      daysTended: 21,
+      journalCount: 5,
+      totalTasks: 35,
+      ringsCount: 3,
+      earnedReason: 'Earned through disciplined task completion and quiet attention.',
+      completedAt: '2026-04-26T20:00:00.000Z',
+    },
+    {
+      speciesId: 'silver_wisteria',
+      speciesName: 'Silver Wisteria',
+      cycleStart: '2026-03-01',
+      cycleEnd: '2026-03-21',
+      status: 'mature',
+      lifecycleStage: 'mature',
+      daysTended: 21,
+      journalCount: 12,
+      totalTasks: 26,
+      ringsCount: 3,
+      earnedReason: 'Deep introspective journaling and emotional release.',
+      completedAt: '2026-03-21T20:00:00.000Z',
+    },
+    {
+      speciesId: 'weeping_willow',
+      speciesName: 'Weeping Willow',
+      cycleStart: '2026-02-01',
+      cycleEnd: '2026-02-22',
+      status: 'mature',
+      lifecycleStage: 'mature',
+      daysTended: 18,
+      journalCount: 8,
+      totalTasks: 28,
+      ringsCount: 3,
+      earnedReason: 'Gentle resilience and forgiveness after missed days.',
+      completedAt: '2026-02-22T20:00:00.000Z',
+    },
+  ];
+
+  await db.gardenTrees.bulkAdd(initialTrees);
 }
 

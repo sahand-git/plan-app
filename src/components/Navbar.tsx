@@ -1,26 +1,33 @@
-﻿import React from 'react';
-import { Plus, Sprout } from 'lucide-react';
+import React from 'react';
+import { Plus, Sprout, Flower2 } from 'lucide-react';
+import { translations, type AppLanguage } from '../utils/i18n';
 
-export type AppView = 'tasks' | 'calendar' | 'notes' | 'habits' | 'data';
+export type AppView = 'tasks' | 'garden' | 'calendar' | 'notes' | 'habits' | 'data';
 
 interface NavbarProps {
   currentView: AppView;
   onOpenNewTask: () => void;
+  lang?: AppLanguage;
 }
-
-const VIEW_TITLES: Record<AppView, { title: string; subtitle: string }> = {
-  tasks: { title: 'The Tree Planner', subtitle: 'Today’s Gentle Rhythm' },
-  calendar: { title: 'Calendar Horizon', subtitle: 'Peaceful Weekly Flow' },
-  notes: { title: 'Daily Journal', subtitle: 'Private Free-Write Sanctuary' },
-  habits: { title: 'Habits & Practice', subtitle: 'Quiet Consistency' },
-  data: { title: 'Vault & Privacy', subtitle: 'Local-First On Device' },
-};
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   onOpenNewTask,
+  lang = 'en',
 }) => {
-  const current = VIEW_TITLES[currentView];
+  const t = translations[lang] || translations.en;
+
+  const viewInfo: Record<AppView, { title: string; subtitle: string; icon: React.ComponentType<{ className?: string }> }> = {
+    tasks: { title: t.appName, subtitle: t.headers.todaysMirror, icon: Sprout },
+    garden: { title: t.garden.title, subtitle: t.garden.subtitle, icon: Flower2 },
+    calendar: { title: t.calendar.title, subtitle: t.calendar.subtitle, icon: Sprout },
+    notes: { title: t.headers.dailyJournal, subtitle: t.tabs.journal, icon: Sprout },
+    habits: { title: t.tasks.habitsPractice, subtitle: t.tree.maturity, icon: Sprout },
+    data: { title: t.headers.vaultPrivacy, subtitle: t.paidBadge, icon: Sprout },
+  };
+
+  const current = viewInfo[currentView] || viewInfo.tasks;
+  const Icon = current.icon;
 
   return (
     <header className="sticky top-0 z-30 w-full bg-parchment/90 dark:bg-night-surface/90 backdrop-blur-md border-b border-stone-200/60 dark:border-night-border transition-colors">
@@ -28,7 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Brand / View Title */}
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-sage-100 dark:bg-night-card flex items-center justify-center text-sage-600 dark:text-sage-400">
-            <Sprout className="w-4 h-4" />
+            <Icon className="w-4 h-4" />
           </div>
 
           <div>
@@ -50,7 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Add gentle task or habit"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add</span>
+            <span>{lang === 'ckb' ? 'زیادکردن' : 'Add'}</span>
           </button>
         </div>
       </div>

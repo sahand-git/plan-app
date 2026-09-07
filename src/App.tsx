@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Task, type TreeState, type Priority } from './db';
+import { db, seedInitialGardenTreesIfEmpty, type Task, type TreeState, type Priority, type GardenTree } from './db';
 import { Navbar, type AppView } from './components/Navbar';
 import { BottomNavbar } from './components/BottomNavbar';
 import { CalmHomeScreen } from './components/home/CalmHomeScreen';
 import { LockedJournalView } from './components/journal/LockedJournalView';
 import { CalendarView } from './components/CalendarView';
 import { DataManagementView } from './components/DataManagementView';
+import { GardenGroveView } from './components/garden/GardenGroveView';
+import { ShareSnapshotModal } from './components/share/ShareSnapshotModal';
+import { YearlyRecapModal } from './components/recap/YearlyRecapModal';
+import { ContextualNotificationModal } from './components/notifications/ContextualNotificationModal';
 import { CalmOnboardingModal } from './components/onboarding/CalmOnboardingModal';
 import { PlatformShell, type PlatformMode } from './components/mockups/PlatformShell';
 import { OneGestureAdd } from './components/tasks/OneGestureAdd';
 import { useTheme } from './hooks/useTheme';
 import { getTodayString } from './utils/date';
+import { getInitialLanguage, saveLanguage, type AppLanguage } from './utils/i18n';
 
 export function App() {
   const { theme, setTheme, toggleTheme } = useTheme();
@@ -21,6 +26,14 @@ export function App() {
   const [noPressureMode, setNoPressureMode] = useState<boolean>(() => {
     return localStorage.getItem('treeplanner_nopressure') === 'true';
   });
+
+  // Language state: 'en' | 'ckb' (Sorani Kurdish RTL)
+  const [lang, setLang] = useState<AppLanguage>(getInitialLanguage);
+
+  // Modals state
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isRecapModalOpen, setIsRecapModalOpen] = useState(false);
+  const [isContextualNotifOpen, setIsContextualNotifOpen] = useState(false);
 
   // Botanical Tree State: 'seedling' | 'sapling' | 'foliage' | 'flourishing' | 'gentle_wilt'
   const [treeState, setTreeState] = useState<TreeState>(() => {
@@ -35,6 +48,21 @@ export function App() {
   // Global Add Modal state
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
+  // Seed sample grove data on first visit
+  useEffect(() => {
+    seedInitialGardenTreesIfEmpty();
+  }, []);
+
+  // Contextual notification prompt: triggered strictly upon tree neglect (gentle_wilt), never on onboarding
+  useEffect(() => {
+    if (treeState === 'gentle_wilt') {
+      const alreadyAsked = localStorage.getItem('treeplanner_contextual_notif_asked') === 'true';
+      if (!alreadyAsked) {
+        setIsContextualNotifOpen(true);
+      }
+    }
+  }, [treeState]);
+
   // Queries
   const tasks = useLiveQuery(
     () => db.tasks.where('date').equals(currentDate).toArray(),
@@ -45,6 +73,8 @@ export function App() {
   const habitLogsList = useLiveQuery(() => db.habitLogs.toArray()) || [];
   const recentTreeLogs = useLiveQuery(() => db.treeLogs.toArray()) || [];
   const notes = useLiveQuery(() => db.notes.toArray()) || [];
+  const gardenTrees = useLiveQuery(() => db.gardenTrees.toArray()) || [];
+  const activeTree: GardenTree | undefined = gardenTrees.find((t) => t.status === 'growing') || gardenTrees[0];
 
   // Map habit logs into { [habitId]: { [date]: boolean } }
   const habitLogsMap: Record<number, Record<string, boolean>> = {};
@@ -68,6 +98,13 @@ export function App() {
       localStorage.setItem('treeplanner_nopressure', String(next));
       return next;
     });
+  };
+
+  // Language Toggle (English <-> Sorani Kurdish RTL)
+  const handleToggleLang = () => {
+    const nextLang: AppLanguage = lang === 'en' ? 'ckb' : 'en';
+    setLang(nextLang);
+    saveLanguage(nextLang);
   };
 
   // Task Operations
@@ -132,11 +169,14 @@ export function App() {
       onToggleTheme={toggleTheme}
       noPressureMode={noPressureMode}
       onToggleNoPressure={handleToggleNoPressure}
+      lang={lang}
+      onToggleLang={handleToggleLang}
     >
       {/* Platform Header */}
       <Navbar
         currentView={currentView}
         onOpenNewTask={() => setIsQuickAddOpen(true)}
+        lang={lang}
       />
 
       {/* Main Viewport */}
@@ -158,6 +198,21 @@ export function App() {
             recentTreeLogs={recentTreeLogs}
             journalCount={notes.length}
             recentNotes={notes}
+            speciesId={activeTree?.speciesId || 'noble_pine'}
+            lifecycleStage={activeTree?.lifecycleStage || 'mature'}
+            lang={lang}
+            onOpenGarden={() => setCurrentView('garden')}
+          />
+        )}
+
+        {currentView === 'garden' && (
+          <GardenGroveView
+            gardenTrees={gardenTrees}
+            activeTree={activeTree}
+            onOpenShareModal={() => setIsShareModalOpen(true)}
+            onOpenRecapModal={() => setIsRecapModalOpen(true)}
+            lang={lang}
+            onBackToMirror={() => setCurrentView('tasks')}
           />
         )}
 
@@ -181,6 +236,7 @@ export function App() {
                 setCurrentDate(date);
                 setCurrentView('notes');
               }}
+              lang={lang}
             />
           </div>
         )}
@@ -191,6 +247,12 @@ export function App() {
             onSetTheme={setTheme}
             noPressureMode={noPressureMode}
             onToggleNoPressure={handleToggleNoPressure}
+            treeState={treeState}
+            speciesId={activeTree?.speciesId || 'noble_pine'}
+            lifecycleStage={activeTree?.lifecycleStage || 'mature'}
+            journalCount={notes.length}
+            onQuickAddTask={() => setIsQuickAddOpen(true)}
+            lang={lang}
           />
         )}
       </main>
@@ -201,6 +263,7 @@ export function App() {
         onSelectView={setCurrentView}
         platformMode={platformMode}
         hasJournalLock={hasJournalLock}
+        lang={lang}
       />
 
       {/* Global Quick Add Modal */}
@@ -215,6 +278,39 @@ export function App() {
       <CalmOnboardingModal
         isOpen={showOnboarding}
         onComplete={() => setShowOnboarding(false)}
+      />
+
+      {/* 9:16 Shareable Story Snapshot Modal */}
+      <ShareSnapshotModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        speciesId={activeTree?.speciesId || 'noble_pine'}
+        lifecycleStage={activeTree?.lifecycleStage || 'mature'}
+        daysTended={activeTree?.daysTended || 14}
+        journalCount={notes.length}
+        ringsCount={activeTree?.ringsCount || 2}
+        lang={lang}
+      />
+
+      {/* Spotify-Wrapped Style Yearly Botanical Recap Modal */}
+      <YearlyRecapModal
+        isOpen={isRecapModalOpen}
+        onClose={() => setIsRecapModalOpen(false)}
+        gardenTrees={gardenTrees}
+        totalJournalCount={notes.length}
+        totalWeeksAccumulated={16}
+        lang={lang}
+        onOpenShareModal={() => {
+          setIsRecapModalOpen(false);
+          setIsShareModalOpen(true);
+        }}
+      />
+
+      {/* Contextual Notification Permission Modal (Gentle Wilt only) */}
+      <ContextualNotificationModal
+        isOpen={isContextualNotifOpen}
+        onClose={() => setIsContextualNotifOpen(false)}
+        lang={lang}
       />
     </PlatformShell>
   );

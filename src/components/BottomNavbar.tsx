@@ -1,12 +1,14 @@
-﻿import React from 'react';
-import { Sprout, BookOpen, Calendar, Settings } from 'lucide-react';
+import React from 'react';
+import { Sprout, BookOpen, Calendar, Settings, Flower2 } from 'lucide-react';
 import type { AppView } from './Navbar';
+import { translations, type AppLanguage } from '../utils/i18n';
 
 interface BottomNavbarProps {
   currentView: AppView;
   onSelectView: (view: AppView) => void;
   platformMode: 'ios' | 'android' | 'responsive';
   hasJournalLock?: boolean;
+  lang?: AppLanguage;
 }
 
 export const BottomNavbar: React.FC<BottomNavbarProps> = ({
@@ -14,12 +16,16 @@ export const BottomNavbar: React.FC<BottomNavbarProps> = ({
   onSelectView,
   platformMode,
   hasJournalLock = false,
+  lang = 'en',
 }) => {
+  const t = translations[lang] || translations.en;
+
   const navTabs: { id: AppView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'tasks', label: 'Mirror', icon: Sprout },
-    { id: 'notes', label: 'Journal', icon: BookOpen },
-    { id: 'calendar', label: 'Calendar', icon: Calendar },
-    { id: 'data', label: 'Vault', icon: Settings },
+    { id: 'tasks', label: t.tabs.mirror, icon: Sprout },
+    { id: 'garden', label: t.tabs.garden, icon: Flower2 },
+    { id: 'notes', label: t.tabs.journal, icon: BookOpen },
+    { id: 'calendar', label: t.tabs.calendar, icon: Calendar },
+    { id: 'data', label: t.tabs.vault, icon: Settings },
   ];
 
   if (platformMode === 'android') {

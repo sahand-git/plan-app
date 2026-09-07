@@ -1,5 +1,6 @@
-﻿import React from 'react';
-import { Smartphone, Apple, Sparkles, Moon, Sun } from 'lucide-react';
+import React from 'react';
+import { Smartphone, Apple, Sparkles, Moon, Sun, Languages } from 'lucide-react';
+import { isRtl, type AppLanguage } from '../../utils/i18n';
 
 export type PlatformMode = 'ios' | 'android' | 'responsive';
 
@@ -10,6 +11,8 @@ interface PlatformShellProps {
   onToggleTheme: () => void;
   noPressureMode: boolean;
   onToggleNoPressure: () => void;
+  lang?: AppLanguage;
+  onToggleLang?: () => void;
   children: React.ReactNode;
 }
 
@@ -20,10 +23,19 @@ export const PlatformShell: React.FC<PlatformShellProps> = ({
   onToggleTheme,
   noPressureMode,
   onToggleNoPressure,
+  lang = 'en',
+  onToggleLang,
   children,
 }) => {
+  const rtl = isRtl(lang);
+
   return (
-    <div className="min-h-screen flex flex-col bg-stone-100 dark:bg-stone-950 transition-colors duration-500">
+    <div
+      dir={rtl ? 'rtl' : 'ltr'}
+      className={`min-h-screen flex flex-col bg-stone-100 dark:bg-stone-950 transition-colors duration-500 ${
+        rtl ? 'font-sans text-right' : ''
+      }`}
+    >
       {/* Top Designer Toolbar (Platform Switcher & Design System Controls) */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-night-surface/80 backdrop-blur-md border-b border-stone-200/60 dark:border-night-border px-4 py-2.5 flex items-center justify-between text-xs">
         <div className="flex items-center gap-3">
@@ -73,8 +85,19 @@ export const PlatformShell: React.FC<PlatformShellProps> = ({
           </div>
         </div>
 
-        {/* Global Controls: No-Pressure Mode & Theme Toggle */}
+        {/* Global Controls: Language, No-Pressure Mode & Theme Toggle */}
         <div className="flex items-center gap-2">
+          {onToggleLang && (
+            <button
+              onClick={onToggleLang}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-medium border border-stone-200/70 dark:border-night-border bg-stone-100/70 dark:bg-night-card text-stone-700 dark:text-stone-300 hover:bg-stone-200/60 transition-all shadow-xs"
+              title="Toggle Language: English / کوردی سۆرانی"
+            >
+              <Languages className="w-3.5 h-3.5 text-sage-600" />
+              <span>{lang === 'ckb' ? 'کوردی' : 'English'}</span>
+            </button>
+          )}
+
           <button
             onClick={onToggleNoPressure}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] transition-all border ${

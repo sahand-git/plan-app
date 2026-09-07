@@ -25,11 +25,14 @@ import {
   formatDateString,
 } from '../utils/date';
 
+import { translations, type AppLanguage } from '../utils/i18n';
+
 interface CalendarViewProps {
   currentDate: string;
   onSelectDate: (date: string) => void;
   onJumpToDayTasks: (date: string) => void;
   onJumpToJournal?: (date: string) => void;
+  lang?: AppLanguage;
 }
 
 interface DayData {
@@ -53,7 +56,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onSelectDate,
   onJumpToDayTasks,
   onJumpToJournal,
+  lang = 'en',
 }) => {
+  const t = translations[lang] || translations.en;
   const [viewDate, setViewDate] = useState<Date>(() => parseISO(currentDate));
   const [selectedDayData, setSelectedDayData] = useState<DayData | null>(null);
 
@@ -200,7 +205,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       <div className="flex items-center justify-between px-1">
         <div>
           <span className="text-[11px] font-medium tracking-wider uppercase text-sage-600 dark:text-sage-400">
-            Botanical Heatmap Horizon
+            {t.calendar.subtitle}
           </span>
           <h2 className="font-serif text-xl sm:text-2xl font-medium text-stone-800 dark:text-stone-100">
             {monthTitle}
@@ -404,20 +409,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   <p className="text-xs text-stone-400 italic">No tasks scheduled for this day.</p>
                 ) : (
                   <div className="space-y-1.5">
-                    {selectedDayData.tasksList.map((t) => (
+                    {selectedDayData.tasksList.map((taskItem) => (
                       <div
-                        key={t.id}
+                        key={taskItem.id}
                         className="flex items-center gap-2 text-xs py-1.5 px-2.5 rounded-xl bg-stone-50 dark:bg-night-card text-stone-700 dark:text-stone-300"
                       >
                         <CheckCircle2
                           className={`w-3.5 h-3.5 shrink-0 ${
-                            t.completed
+                            taskItem.completed
                               ? 'text-sage-600 dark:text-sage-400'
                               : 'text-stone-300 dark:text-stone-600'
                           }`}
                         />
-                        <span className={t.completed ? 'line-through text-stone-400' : ''}>
-                          {t.title}
+                        <span className={taskItem.completed ? 'line-through text-stone-400' : ''}>
+                          {taskItem.title}
                         </span>
                       </div>
                     ))}

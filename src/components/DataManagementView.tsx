@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Download,
@@ -13,14 +13,22 @@ import {
   Sparkles,
   Sprout,
 } from 'lucide-react';
-import { db, type Task, type DailyNote, type Habit, type HabitLog, type TreeDayLog } from '../db';
+import { db, type Task, type DailyNote, type Habit, type HabitLog, type TreeDayLog, type TreeState, type TreeLifecycleStage } from '../db';
 import type { Theme } from '../hooks/useTheme';
+import { HomeScreenWidgetPreview } from './widgets/HomeScreenWidgetPreview';
+import type { AppLanguage } from '../utils/i18n';
 
 interface DataManagementViewProps {
   theme: Theme;
   onSetTheme: (theme: Theme) => void;
   noPressureMode: boolean;
   onToggleNoPressure: () => void;
+  treeState?: TreeState;
+  speciesId?: string;
+  lifecycleStage?: TreeLifecycleStage;
+  journalCount?: number;
+  onQuickAddTask?: () => void;
+  lang?: AppLanguage;
 }
 
 interface ExportPayload {
@@ -41,6 +49,11 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   onSetTheme,
   noPressureMode,
   onToggleNoPressure,
+  treeState = 'foliage',
+  speciesId = 'noble_pine',
+  lifecycleStage = 'mature',
+  onQuickAddTask,
+  lang = 'en',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -404,6 +417,16 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* System Extension: Home Screen Widget Preview */}
+      <HomeScreenWidgetPreview
+        treeState={treeState}
+        speciesId={speciesId}
+        lifecycleStage={lifecycleStage}
+        journalCount={notes.length}
+        onQuickAddTask={onQuickAddTask || (() => {})}
+        lang={lang}
+      />
 
       {/* Privacy Guarantee */}
       <div className="p-4 bg-earth-50/60 dark:bg-night-card/40 border border-earth-200/40 dark:border-night-border rounded-2xl flex items-start gap-3 text-xs text-stone-500 dark:text-stone-400">

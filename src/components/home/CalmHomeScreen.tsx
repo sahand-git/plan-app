@@ -7,7 +7,8 @@ import { DayEndTransitionModal } from '../tree/DayEndTransitionModal';
 import { OneGestureAdd } from '../tasks/OneGestureAdd';
 import { CalmTaskItem } from '../tasks/CalmTaskItem';
 import { CalmHabitRow } from '../tasks/CalmHabitRow';
-import type { Task, Habit, TreeState, TreeDayLog, Priority, DailyNote } from '../../db';
+import type { Task, Habit, TreeState, TreeDayLog, Priority, DailyNote, TreeLifecycleStage } from '../../db';
+import { translations, type AppLanguage } from '../../utils/i18n';
 
 interface CalmHomeScreenProps {
   currentDate: string; // YYYY-MM-DD
@@ -26,6 +27,10 @@ interface CalmHomeScreenProps {
   journalCount?: number;
   recentNotes?: DailyNote[];
   totalWeeksAccumulated?: number;
+  speciesId?: string;
+  lifecycleStage?: TreeLifecycleStage;
+  lang?: AppLanguage;
+  onOpenGarden?: () => void;
 }
 
 export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
@@ -45,7 +50,12 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
   journalCount = 4,
   recentNotes = [],
   totalWeeksAccumulated = 12,
+  speciesId = 'noble_pine',
+  lifecycleStage = 'mature',
+  lang = 'en',
+  onOpenGarden,
 }) => {
+  const t = translations[lang] || translations.en;
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showDayEndModal, setShowDayEndModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -78,7 +88,7 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
       <div className="flex items-center justify-between pt-1">
         <div>
           <span className="text-[11px] font-medium tracking-wider uppercase text-sage-600 dark:text-sage-400">
-            Today's Mirror
+            {t.headers.todaysMirror}
           </span>
           <h2 className="font-serif text-xl sm:text-2xl font-medium text-stone-800 dark:text-stone-100">
             {formattedDate}
@@ -92,8 +102,7 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
           title="Simulate Day's End (The once-daily update moment)"
         >
           <Moon className="w-3.5 h-3.5 text-earth-600 dark:text-stone-400" />
-          <span className="hidden sm:inline">Day's End</span>
-          <span>Reflect</span>
+          <span>{t.tree.daysEndReflect}</span>
         </button>
       </div>
 
@@ -108,6 +117,10 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
           journalCount={journalCount}
           recentNotes={recentNotes}
           totalWeeksAccumulated={totalWeeksAccumulated}
+          speciesId={speciesId}
+          lifecycleStage={lifecycleStage}
+          onOpenGarden={onOpenGarden}
+          lang={lang}
         />
 
         {/* Quick Inspector Toggle Button (Subtle, for reviewers/users) */}
@@ -132,11 +145,11 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
             <Plus className="w-4 h-4" />
           </div>
           <span className="text-xs sm:text-sm text-stone-400 font-serif italic">
-            What quietly needs your attention?
+            {t.tasks.addPlaceholder}
           </span>
         </div>
         <span className="text-[11px] text-stone-400 bg-stone-100 dark:bg-night-card px-2 py-0.5 rounded-md">
-          pull or tap
+          {t.tasks.pullOrTap}
         </span>
       </div>
 
