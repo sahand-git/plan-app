@@ -7,7 +7,273 @@ interface ProceduralTreeRendererProps {
   stage?: TreeLifecycleStage;
   isDimmed?: boolean;
   journalCount?: number;
+  tasksTotal?: number;
+  tasksCompleted?: number;
   className?: string;
+}
+
+const CANOPY_NODES = [
+  { x: 82, y: 94 },
+  { x: 158, y: 90 },
+  { x: 104, y: 72 },
+  { x: 136, y: 70 },
+  { x: 70, y: 122 },
+  { x: 170, y: 118 },
+  { x: 94, y: 126 },
+  { x: 146, y: 124 },
+  { x: 120, y: 58 },
+  { x: 120, y: 108 },
+  { x: 106, y: 140 },
+  { x: 134, y: 140 },
+];
+
+const SAPLING_NODES = [
+  { x: 86, y: 122 },
+  { x: 154, y: 110 },
+  { x: 114, y: 108 },
+  { x: 98, y: 116 },
+  { x: 142, y: 104 },
+  { x: 128, y: 106 },
+];
+
+const SEED_NODES = [
+  { x: 102, y: 142 },
+  { x: 138, y: 142 },
+  { x: 120, y: 138 },
+];
+
+function renderBotanicalBloom(
+  speciesId: string,
+  type: 'flower' | 'fruit' | 'bud',
+  x: number,
+  y: number,
+  isDimmed: boolean,
+  key: string | number
+) {
+  if (type === 'bud') {
+    return (
+      <g key={key} className="transition-all duration-500">
+        <ellipse cx={x} cy={y} rx="2.5" ry="3.5" fill={isDimmed ? '#7A756D' : '#8FA876'} />
+        <path d={`M${x - 1.8} ${y + 2} Q${x} ${y + 3.5} ${x + 1.8} ${y + 2}`} stroke="#4D593E" strokeWidth="0.8" fill="none" />
+      </g>
+    );
+  }
+
+  if (type === 'flower') {
+    if (speciesId === 'cherry_blossom') {
+      const petalColor = isDimmed ? '#A89E9D' : '#FFB7C5';
+      const centerColor = isDimmed ? '#BFB8AF' : '#FFE066';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125 cursor-pointer">
+          <circle cx={x} cy={y - 3.2} r="2.4" fill={petalColor} opacity="0.95" />
+          <circle cx={x + 3.1} cy={y - 1} r="2.4" fill={petalColor} opacity="0.95" />
+          <circle cx={x + 1.9} cy={y + 2.7} r="2.4" fill={petalColor} opacity="0.95" />
+          <circle cx={x - 1.9} cy={y + 2.7} r="2.4" fill={petalColor} opacity="0.95" />
+          <circle cx={x - 3.1} cy={y - 1} r="2.4" fill={petalColor} opacity="0.95" />
+          <circle cx={x} cy={y} r="1.4" fill={centerColor} />
+        </g>
+      );
+    }
+    if (speciesId === 'sweet_fig') {
+      const figFlowerColor = isDimmed ? '#9E9A92' : '#C7D59F';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125">
+          <circle cx={x} cy={y} r="3.4" fill={figFlowerColor} />
+          <circle cx={x} cy={y} r="1.6" fill="#E8EDDF" />
+        </g>
+      );
+    }
+    if (speciesId === 'noble_pine') {
+      const pineFlowerColor = isDimmed ? '#8A8275' : '#E9C46A';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125">
+          <ellipse cx={x} cy={y} rx="2.6" ry="4" fill={pineFlowerColor} />
+          <line x1={x - 1.5} y1={y} x2={x + 1.5} y2={y} stroke="#8C6D38" strokeWidth="0.8" />
+        </g>
+      );
+    }
+    if (speciesId === 'ancient_ginkgo') {
+      const ginkgoFlowerColor = isDimmed ? '#999182' : '#F4A261';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125">
+          <path d={`M${x} ${y + 2} L${x - 3.5} ${y - 2.5} Q${x} ${y - 4} ${x + 3.5} ${y - 2.5} Z`} fill={ginkgoFlowerColor} />
+          <circle cx={x} cy={y + 1} r="1.2" fill="#E76F51" />
+        </g>
+      );
+    }
+    if (speciesId === 'stone_bonsai') {
+      const plumColor = isDimmed ? '#ADAAA3' : '#FFFFFF';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125">
+          <circle cx={x} cy={y - 2.8} r="2.2" fill={plumColor} />
+          <circle cx={x + 2.7} cy={y - 0.9} r="2.2" fill={plumColor} />
+          <circle cx={x + 1.7} cy={y + 2.4} r="2.2" fill={plumColor} />
+          <circle cx={x - 1.7} cy={y + 2.4} r="2.2" fill={plumColor} />
+          <circle cx={x - 2.7} cy={y - 0.9} r="2.2" fill={plumColor} />
+          <circle cx={x} cy={y} r="1.3" fill="#D62828" />
+        </g>
+      );
+    }
+    if (speciesId === 'japanese_maple') {
+      const mapleFlowerColor = isDimmed ? '#8F7A77' : '#D90429';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125">
+          <path d={`M${x} ${y - 3.5} L${x + 1} ${y - 1} L${x + 3.5} ${y} L${x + 1} ${y + 1} L${x} ${y + 3.5} L${x - 1} ${y + 1} L${x - 3.5} ${y} L${x - 1} ${y - 1} Z`} fill={mapleFlowerColor} />
+          <circle cx={x} cy={y} r="1.1" fill="#FFB703" />
+        </g>
+      );
+    }
+    if (speciesId === 'jasmine_magnolia') {
+      const magColor = isDimmed ? '#BDB8AF' : '#FDFBF7';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125">
+          <ellipse cx={x - 2} cy={y} rx="2.5" ry="4" transform={`rotate(-15 ${x - 2} ${y})`} fill={magColor} />
+          <ellipse cx={x + 2} cy={y} rx="2.5" ry="4" transform={`rotate(15 ${x + 2} ${y})`} fill={magColor} />
+          <ellipse cx={x} cy={y - 1} rx="2.2" ry="4.5" fill={magColor} />
+          <circle cx={x} cy={y + 1} r="1.3" fill="#E9C46A" />
+        </g>
+      );
+    }
+    if (speciesId === 'silver_wisteria') {
+      const wistColor = isDimmed ? '#8D8494' : '#9D4EDD';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125">
+          <circle cx={x} cy={y - 2} r="2.2" fill={wistColor} />
+          <circle cx={x - 1.6} cy={y + 1} r="1.9" fill={wistColor} />
+          <circle cx={x + 1.6} cy={y + 1} r="1.9" fill={wistColor} />
+          <circle cx={x} cy={y + 3.8} r="1.6" fill={wistColor} />
+        </g>
+      );
+    }
+    if (speciesId === 'wild_azalea') {
+      const azaleaColor = isDimmed ? '#9E7882' : '#D81159';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125">
+          <ellipse cx={x - 2.2} cy={y - 1} rx="2.4" ry="3.2" transform={`rotate(-25 ${x - 2.2} ${y - 1})`} fill={azaleaColor} />
+          <ellipse cx={x + 2.2} cy={y - 1} rx="2.4" ry="3.2" transform={`rotate(25 ${x + 2.2} ${y - 1})`} fill={azaleaColor} />
+          <ellipse cx={x} cy={y + 1.8} rx="2.4" ry="3" fill={azaleaColor} />
+          <circle cx={x} cy={y} r="1.3" fill="#FFE3A8" />
+        </g>
+      );
+    }
+    if (speciesId === 'camellia_rose') {
+      const camelliaColor = isDimmed ? '#9E8585' : '#E56B6F';
+      return (
+        <g key={key} className="transition-transform duration-500 hover:scale-125">
+          <circle cx={x} cy={y} r="3.8" fill={camelliaColor} />
+          <circle cx={x} cy={y} r="2.4" fill={isDimmed ? '#BDB0AF' : '#EAAC8B'} />
+          <circle cx={x} cy={y} r="1.2" fill={isDimmed ? '#6B5E5E' : '#B56576'} />
+        </g>
+      );
+    }
+    // Default floral blossom
+    return (
+      <g key={key} className="transition-transform duration-500 hover:scale-125">
+        <circle cx={x} cy={y - 2.8} r="2.1" fill={isDimmed ? '#99948D' : '#F4A261'} />
+        <circle cx={x + 2.6} cy={y - 0.8} r="2.1" fill={isDimmed ? '#99948D' : '#F4A261'} />
+        <circle cx={x + 1.6} cy={y + 2.3} r="2.1" fill={isDimmed ? '#99948D' : '#F4A261'} />
+        <circle cx={x - 1.6} cy={y + 2.3} r="2.1" fill={isDimmed ? '#99948D' : '#F4A261'} />
+        <circle cx={x - 2.6} cy={y - 0.8} r="2.1" fill={isDimmed ? '#99948D' : '#F4A261'} />
+        <circle cx={x} cy={y} r="1.3" fill="#FFE599" />
+      </g>
+    );
+  }
+
+  // Fruit rendering
+  if (speciesId === 'cherry_blossom') {
+    const cherryColor = isDimmed ? '#8A6D6D' : '#D90429';
+    return (
+      <g key={key} className="transition-transform duration-500 hover:scale-125">
+        <path d={`M${x} ${y - 4} Q${x - 2} ${y - 1} ${x - 2.5} ${y + 2}`} stroke="#4F772D" strokeWidth="0.9" fill="none" />
+        <path d={`M${x} ${y - 4} Q${x + 2} ${y - 1} ${x + 2.5} ${y + 2}`} stroke="#4F772D" strokeWidth="0.9" fill="none" />
+        <circle cx={x - 2.8} cy={y + 2.5} r="2.9" fill={cherryColor} />
+        <circle cx={x - 3.4} cy={y + 1.7} r="0.9" fill="#FFCCD5" opacity="0.85" />
+        <circle cx={x + 2.8} cy={y + 2.8} r="2.9" fill={cherryColor} />
+        <circle cx={x + 2.2} cy={y + 2.0} r="0.9" fill="#FFCCD5" opacity="0.85" />
+      </g>
+    );
+  }
+  if (speciesId === 'sweet_fig') {
+    const figColor = isDimmed ? '#6B586E' : '#5C2751';
+    return (
+      <g key={key} className="transition-transform duration-500 hover:scale-125">
+        <path d={`M${x} ${y - 3.2} C${x - 4} ${y - 1}, ${x - 4.4} ${y + 4}, ${x} ${y + 5.8} C${x + 4.4} ${y + 4}, ${x + 4} ${y - 1}, ${x} ${y - 3.2} Z`} fill={figColor} />
+        <circle cx={x} cy={y - 3.2} r="1.3" fill="#588157" />
+        <circle cx={x - 1.2} cy={y + 1} r="0.9" fill="#B388EB" opacity="0.65" />
+      </g>
+    );
+  }
+  if (speciesId === 'noble_pine') {
+    const coneColor1 = isDimmed ? '#66594F' : '#6F4E37';
+    const coneColor2 = isDimmed ? '#7D7065' : '#8D6E63';
+    return (
+      <g key={key} className="transition-transform duration-500 hover:scale-125">
+        <ellipse cx={x} cy={y + 1} rx="2.9" ry="4.6" fill={coneColor1} />
+        <ellipse cx={x} cy={y - 1.6} rx="2.6" ry="1.3" fill={coneColor2} />
+        <ellipse cx={x} cy={y + 0.5} rx="2.7" ry="1.3" fill={coneColor2} />
+        <ellipse cx={x} cy={y + 2.6} rx="2.3" ry="1.3" fill={coneColor2} />
+      </g>
+    );
+  }
+  if (speciesId === 'ancient_ginkgo') {
+    const ginkgoFruitColor = isDimmed ? '#8A7B66' : '#F39C12';
+    return (
+      <g key={key} className="transition-transform duration-500 hover:scale-125">
+        <path d={`M${x} ${y - 4} L${x} ${y}`} stroke="#606C38" strokeWidth="0.9" />
+        <circle cx={x} cy={y + 2.2} r="3.3" fill={ginkgoFruitColor} />
+        <circle cx={x - 1} cy={y + 1.2} r="0.9" fill="#FFEAA7" opacity="0.85" />
+      </g>
+    );
+  }
+  if (speciesId === 'stone_bonsai') {
+    const plumFruitColor = isDimmed ? '#6B7A75' : '#52796F';
+    return (
+      <g key={key} className="transition-transform duration-500 hover:scale-125">
+        <path d={`M${x} ${y - 3.5} L${x} ${y}`} stroke="#403D39" strokeWidth="0.9" />
+        <circle cx={x} cy={y + 2} r="3.2" fill={plumFruitColor} />
+        <circle cx={x - 0.9} cy={y + 1.1} r="0.9" fill="#B5E48C" opacity="0.75" />
+      </g>
+    );
+  }
+  if (speciesId === 'japanese_maple') {
+    const samaraColor = isDimmed ? '#7A6262' : '#9E2A2B';
+    return (
+      <g key={key} className="transition-transform duration-500 hover:scale-125">
+        <path d={`M${x} ${y} Q${x - 5} ${y + 4} ${x - 7} ${y + 1}`} stroke={samaraColor} strokeWidth="1.9" strokeLinecap="round" fill="none" />
+        <path d={`M${x} ${y} Q${x + 5} ${y + 4} ${x + 7} ${y + 1}`} stroke={samaraColor} strokeWidth="1.9" strokeLinecap="round" fill="none" />
+        <circle cx={x} cy={y} r="1.4" fill="#540B0E" />
+      </g>
+    );
+  }
+  if (speciesId === 'mountain_cedar') {
+    const cedarBerryColor = isDimmed ? '#6E7882' : '#4A6FA5';
+    return (
+      <g key={key} className="transition-transform duration-500 hover:scale-125">
+        <circle cx={x} cy={y + 1.2} r="3.2" fill={cedarBerryColor} />
+        <circle cx={x - 0.8} cy={y + 0.4} r="1.1" fill="#E0E1DD" opacity="0.85" />
+      </g>
+    );
+  }
+  if (speciesId === 'wild_azalea') {
+    const azaleaBerryColor = isDimmed ? '#525266' : '#2B2D42';
+    return (
+      <g key={key} className="transition-transform duration-500 hover:scale-125">
+        <circle cx={x - 1.5} cy={y + 1} r="2.3" fill={azaleaBerryColor} />
+        <circle cx={x + 1.5} cy={y + 1} r="2.3" fill={azaleaBerryColor} />
+        <circle cx={x} cy={y + 3.2} r="1.9" fill={azaleaBerryColor} />
+      </g>
+    );
+  }
+
+  // Default fruit
+  const defFruitColor = isDimmed ? '#7D6F63' : '#E76F51';
+  return (
+    <g key={key} className="transition-transform duration-500 hover:scale-125">
+      <path d={`M${x} ${y - 3} L${x} ${y}`} stroke="#588157" strokeWidth="0.9" />
+      <circle cx={x} cy={y + 2} r="3.1" fill={defFruitColor} />
+      <circle cx={x - 1} cy={y + 0.9} r="0.9" fill="#FFF3B0" opacity="0.75" />
+    </g>
+  );
 }
 
 export const ProceduralTreeRenderer: React.FC<ProceduralTreeRendererProps> = ({
@@ -15,10 +281,15 @@ export const ProceduralTreeRenderer: React.FC<ProceduralTreeRendererProps> = ({
   stage = 'mature',
   isDimmed = false,
   journalCount = 4,
+  tasksTotal,
+  tasksCompleted,
   className = 'w-full h-full',
 }) => {
   const species: SpeciesDefinition = SPECIES_CATALOG[speciesId] || SPECIES_CATALOG.noble_pine;
   const p = species.palette;
+
+  const effectiveTasksTotal = Math.max(tasksTotal ?? 0, tasksCompleted ?? 0);
+  const effectiveTasksCompleted = tasksCompleted ?? 0;
 
   // Root depth tier 1-4 based on permanent journal reflections
   const rootTier = Math.max(1, Math.min(4, Math.ceil(journalCount / 4)));
@@ -74,6 +345,18 @@ export const ProceduralTreeRenderer: React.FC<ProceduralTreeRendererProps> = ({
           {/* Central seed bead */}
           <circle cx="120" cy="155" r="3.5" fill={accentFill} />
         </g>
+
+        {/* Task-driven blossoms & fruits around seedling */}
+        {effectiveTasksTotal > 0 && (
+          <g className="transition-all duration-700">
+            {Array.from({ length: Math.min(effectiveTasksTotal, 3) }).map((_, i) => {
+              const node = SEED_NODES[i % SEED_NODES.length];
+              const isCompleted = i < effectiveTasksCompleted;
+              const type = isCompleted ? (i % 2 === 0 ? 'flower' : 'fruit') : 'bud';
+              return renderBotanicalBloom(species.id, type, node.x, node.y, isDimmed, `seed-bloom-${i}`);
+            })}
+          </g>
+        )}
       </svg>
     );
   }
@@ -118,6 +401,18 @@ export const ProceduralTreeRenderer: React.FC<ProceduralTreeRendererProps> = ({
           <ellipse cx="128" cy="110" rx="18" ry="11" transform={isDimmed ? 'rotate(8 128 110)' : 'rotate(18 128 110)'} fill={foliageFill2} />
           <circle cx="121" cy="100" r="4" fill={accentFill} />
         </g>
+
+        {/* Task-driven blossoms & fruits on sapling branches */}
+        {effectiveTasksTotal > 0 && (
+          <g className="transition-all duration-700">
+            {Array.from({ length: Math.min(effectiveTasksTotal, 6) }).map((_, i) => {
+              const node = SAPLING_NODES[i % SAPLING_NODES.length];
+              const isCompleted = i < effectiveTasksCompleted;
+              const type = isCompleted ? (i % 2 === 0 ? 'flower' : 'fruit') : 'bud';
+              return renderBotanicalBloom(species.id, type, node.x, node.y, isDimmed, `sapling-bloom-${i}`);
+            })}
+          </g>
+        )}
       </svg>
     );
   }
@@ -452,6 +747,18 @@ export const ProceduralTreeRenderer: React.FC<ProceduralTreeRendererProps> = ({
           </>
         )}
       </g>
+
+      {/* Task-driven blossoms & fruits across mature botanical canopy */}
+      {effectiveTasksTotal > 0 && (
+        <g className="transition-all duration-700">
+          {Array.from({ length: Math.min(effectiveTasksTotal, 12) }).map((_, i) => {
+            const node = CANOPY_NODES[i % CANOPY_NODES.length];
+            const isCompleted = i < effectiveTasksCompleted;
+            const type = isCompleted ? (i % 2 === 0 ? 'flower' : 'fruit') : 'bud';
+            return renderBotanicalBloom(species.id, type, node.x, node.y, isDimmed, `mature-bloom-${i}`);
+          })}
+        </g>
+      )}
     </svg>
   );
 };

@@ -201,19 +201,19 @@ export async function setSetting<T>(key: string, value: T): Promise<void> {
 }
 
 /**
- * Calculates tree lifecycle stage automatically from cumulative completion data:
- * - Starts as 'seed' on day 1 / initial stage
- * - Advances to 'sapling' once 3+ actions completed or 2+ days tended
- * - Advances to 'mature' once 12+ actions completed or 5+ days tended
+ * Calculates tree lifecycle stage automatically from days of daily habits practice:
+ * - 'seed': 0 - 2 days of daily habit practice (delicate emerging sprout)
+ * - 'sapling': 3 - 5 days of steady habit practice (upright trunk with young branches)
+ * - 'mature': 6+ days of habit rhythm (full majestic canopy)
  */
 export function calculateLifecycleStage(
-  daysTended: number,
-  totalActions: number
+  habitDaysCount: number,
+  _legacyTotalActions?: number
 ): TreeLifecycleStage {
-  if (totalActions >= 12 || daysTended >= 5) {
+  if (habitDaysCount >= 6) {
     return 'mature';
   }
-  if (totalActions >= 3 || daysTended >= 2) {
+  if (habitDaysCount >= 3) {
     return 'sapling';
   }
   return 'seed';
@@ -222,7 +222,7 @@ export function calculateLifecycleStage(
 /**
  * Determines whether the active tree enters dimmed rest due to 2+ days of inactivity.
  * Checks the last 2 consecutive calendar days (e.g. today and yesterday).
- * If both days had zero completed tasks and zero completed habits, tree enters gentle dimmed rest.
+ * If both days had zero completed habits, tree enters gentle dimmed rest.
  */
 export function calculateIsDimmedNeglect(
   tasks: Task[],
@@ -231,7 +231,7 @@ export function calculateIsDimmedNeglect(
   currentDateStr: string,
   treeLogs: TreeDayLog[]
 ): boolean {
-  // Check today's completions
+  // Check today's habit and task completions
   const todayTasksCompleted = tasks.filter((t) => t.completed).length;
   const todayHabitsCompleted = habits.filter(
     (h) => h.id && habitLogsMap[h.id]?.[currentDateStr]
@@ -346,20 +346,22 @@ export async function seedInitialGardenTreesIfEmpty(): Promise<void> {
   const count = await db.gardenTrees.count();
   if (count > 0) return;
 
+  const today = new Date().toISOString().split('T')[0];
+
   const initialTrees: GardenTree[] = [
     {
       speciesId: 'noble_pine',
       speciesName: 'Noble Pine',
-      cycleStart: '2026-07-01',
-      cycleEnd: '2026-07-21',
+      cycleStart: today,
+      cycleEnd: today,
       status: 'growing',
       isActive: 1,
-      lifecycleStage: 'mature',
-      daysTended: 14,
-      journalCount: 6,
-      totalTasks: 28,
-      ringsCount: 2,
-      earnedReason: 'Earned through unwavering habit practice and steady daily rhythm.',
+      lifecycleStage: 'seed',
+      daysTended: 1,
+      journalCount: 0,
+      totalTasks: 0,
+      ringsCount: 1,
+      earnedReason: 'Fresh beginning rooted in unhurried daily presence.',
     },
     {
       speciesId: 'cherry_blossom',

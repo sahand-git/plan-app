@@ -19,6 +19,8 @@ interface TreeCanvasProps {
   recentNotes?: DailyNote[];
   totalWeeksAccumulated?: number;
   speciesId?: string;
+  tasksTotal?: number;
+  tasksCompleted?: number;
   onOpenGarden?: () => void;
   lang?: AppLanguage;
 }
@@ -33,6 +35,8 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
   recentNotes = [],
   totalWeeksAccumulated = 12,
   speciesId = 'noble_pine',
+  tasksTotal,
+  tasksCompleted,
   onOpenGarden,
   lang = 'en',
 }) => {
@@ -60,10 +64,12 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
     subtitle = t.tree.dimmedNeglectSubtitle;
   } else if (effectiveStage === 'seed') {
     title = t.tree.seed;
-    subtitle = 'Rooted and beginning';
+    subtitle = 'Tender sprout • Nurtured by daily habits';
   } else if (effectiveStage === 'sapling') {
     title = t.tree.sapling;
-    subtitle = 'Reaching with steady ease';
+    subtitle = 'Young sapling • Reaching with steady habit rhythm';
+  } else {
+    subtitle = 'Majestic mature botanical tree';
   }
 
   // If user selected Underground View
@@ -102,13 +108,15 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
         {/* Soft Organic Aura */}
         <div className="absolute inset-4 rounded-full bg-sage-50/60 dark:bg-night-card/40 blur-2xl pointer-events-none transition-all duration-1000" />
 
-        {/* Procedural Botanical Tree Rendering (Canopy + Permanent Roots System + 14 Species) */}
+        {/* Procedural Botanical Tree Rendering (Canopy + Permanent Roots System + 14 Species + Tasks Blossoms & Fruits) */}
         <div className="w-full h-full animate-tree-breeze">
           <ProceduralTreeRenderer
             speciesId={speciesId}
             stage={effectiveStage}
             isDimmed={effectiveDimmed}
             journalCount={journalCount}
+            tasksTotal={tasksTotal}
+            tasksCompleted={tasksCompleted}
           />
         </div>
 
@@ -120,14 +128,21 @@ export const TreeCanvas: React.FC<TreeCanvasProps> = ({
         </div>
       </div>
 
-      {/* Glanceable Botanical State Subtitle */}
-      <div className="mt-1 text-center">
+      {/* Glanceable Botanical State Subtitle & Blossom Indicators */}
+      <div className="mt-1 text-center space-y-0.5">
         <p className="text-sm font-serif font-medium text-stone-800 dark:text-stone-200 tracking-wide">
           {title}
         </p>
-        <p className="text-xs text-stone-400 dark:text-stone-400 mt-0.5 font-light">
+        <p className="text-xs text-stone-400 dark:text-stone-400 font-light">
           {subtitle}
         </p>
+        {tasksCompleted !== undefined && tasksCompleted > 0 && (
+          <div className="pt-1 flex items-center justify-center gap-2">
+            <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full bg-rose-50/80 dark:bg-night-card border border-rose-200/60 dark:border-night-border text-rose-800 dark:text-rose-300 font-medium animate-soft-fade-up">
+              🌸 {Math.ceil(tasksCompleted / 2)} Blossoms & 🍎 {Math.floor(tasksCompleted / 2)} Fruits
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 4-Part Root, Ring, and Garden Perspective Switcher */}

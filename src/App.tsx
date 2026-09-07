@@ -4,6 +4,7 @@ import {
   db,
   seedInitialGardenTreesIfEmpty,
   calculateIsDimmedNeglect,
+  calculateLifecycleStage,
   type Task,
   type Priority,
   type GardenTree,
@@ -84,6 +85,16 @@ export function App() {
 
   // Automatic Inactivity / Neglect calculation from database records
   const isDimmed = calculateIsDimmedNeglect(tasks, habits, habitLogsMap, currentDate, recentTreeLogs);
+
+  // Distinct habit days tended calculation for the active cycle
+  const activeHabitDates = new Set<string>();
+  for (const log of habitLogsList) {
+    if (log.completed) {
+      activeHabitDates.add(log.date);
+    }
+  }
+  const habitDaysCount = Math.max(activeHabitDates.size, activeTree?.daysTended || 1);
+  const currentLifecycleStage = activeTree ? calculateLifecycleStage(habitDaysCount) : 'seed';
 
   // Contextual notification prompt: triggered strictly upon tree neglect (gentle rest), never on onboarding
   useEffect(() => {
@@ -242,7 +253,7 @@ export function App() {
             journalCount={notes.length}
             recentNotes={notes}
             speciesId={activeTree?.speciesId || 'noble_pine'}
-            lifecycleStage={activeTree?.lifecycleStage || 'mature'}
+            lifecycleStage={currentLifecycleStage}
             isDimmed={isDimmed}
             lang={lang}
             onOpenGarden={() => setCurrentView('garden')}

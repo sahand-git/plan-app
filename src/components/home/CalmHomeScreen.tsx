@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Moon } from 'lucide-react';
+import { Plus, Moon, Sprout, Sparkles } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { TreeCanvas } from '../tree/TreeCanvas';
 import { TreeStatsModal } from '../tree/TreeStatsModal';
@@ -7,6 +7,7 @@ import { DayEndTransitionModal } from '../tree/DayEndTransitionModal';
 import { OneGestureAdd } from '../tasks/OneGestureAdd';
 import { CalmTaskItem } from '../tasks/CalmTaskItem';
 import { CalmHabitRow } from '../tasks/CalmHabitRow';
+import { DailyRhythmSetupModal } from '../habits/DailyRhythmSetupModal';
 import type { Task, Habit, TreeState, TreeDayLog, Priority, DailyNote, TreeLifecycleStage } from '../../db';
 import { translations, type AppLanguage } from '../../utils/i18n';
 
@@ -61,6 +62,7 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showDayEndModal, setShowDayEndModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showRhythmSetup, setShowRhythmSetup] = useState(false);
 
   // 7-day week calculation
   const weekDates = [0, 1, 2, 3, 4, 5, 6].map((offset) => {
@@ -100,10 +102,10 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
         <button
           onClick={() => setShowDayEndModal(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-earth-100/80 dark:bg-night-card hover:bg-earth-200/70 border border-earth-200/60 dark:border-night-border text-earth-800 dark:text-stone-300 text-xs font-medium transition-all shadow-xs active:scale-95"
-          title="Simulate Day's End (The once-daily update moment)"
+          title="Evening reflection on today's rhythm"
         >
           <Moon className="w-3.5 h-3.5 text-earth-600 dark:text-stone-400" />
-          <span>{t.tree.daysEndReflect}</span>
+          <span>Evening Reflection</span>
         </button>
       </div>
 
@@ -119,9 +121,28 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
           recentNotes={recentNotes}
           totalWeeksAccumulated={totalWeeksAccumulated}
           speciesId={speciesId}
+          tasksTotal={tasksTotal}
+          tasksCompleted={tasksCompleted}
           onOpenGarden={onOpenGarden}
           lang={lang}
         />
+
+        {/* Botanical Growth & Harvest Status Bar */}
+        <div className="w-full max-w-sm mt-3 flex items-center justify-between px-3.5 py-2 rounded-2xl bg-stone-100/70 dark:bg-night-surface/70 border border-stone-200/60 dark:border-night-border text-xs text-stone-600 dark:text-stone-300 shadow-2xs">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">{lifecycleStage === 'seed' ? '🌱' : lifecycleStage === 'sapling' ? '🌿' : '🌳'}</span>
+            <span className="font-serif font-medium text-stone-800 dark:text-stone-100">
+              {lifecycleStage === 'seed' ? 'Seed Sprout' : lifecycleStage === 'sapling' ? 'Young Sapling' : 'Mature Tree'}
+            </span>
+            <span className="text-[11px] text-stone-400 font-light">
+              {habitsTotal === 0 ? '• plant habits below' : `• ${todayHabitsCompleted}/${habitsTotal} habits tended`}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-stone-400 font-light">
+            <span>🌸</span>
+            <span>{tasksTotal === 0 ? 'open horizon' : `${tasksCompleted}/${tasksTotal} tasks bloomed`}</span>
+          </div>
+        </div>
       </div>
 
       {/* One-Gesture Quick Task Add (Serene Whisper Bar) */}
@@ -145,12 +166,42 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
       </div>
 
       {/* Daily Habits Section */}
-      {habits.length > 0 && (
+      {habits.length === 0 ? (
+        <div className="p-5 rounded-3xl bg-sage-50/70 dark:bg-night-card/60 border border-sage-200/70 dark:border-night-border text-center space-y-3 animate-soft-fade-up">
+          <div className="w-11 h-11 rounded-2xl bg-sage-100 dark:bg-night-surface mx-auto flex items-center justify-center text-sage-600 dark:text-sage-400">
+            <Sprout className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="font-serif text-base font-medium text-stone-800 dark:text-stone-100">
+              Set Your Anchor Habits
+            </h4>
+            <p className="text-xs text-stone-500 dark:text-stone-400 font-light max-w-xs mx-auto">
+              Your daily habits nurture your tree from a seed into a mature tree. Daily checking guides your tree's growth.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowRhythmSetup(true)}
+            className="px-4 py-2 rounded-2xl bg-sage-600 hover:bg-sage-700 active:scale-95 text-white text-xs font-medium transition-all shadow-xs inline-flex items-center gap-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Choose Daily Routines & Habits</span>
+          </button>
+        </div>
+      ) : (
         <div className="space-y-2.5">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-serif font-medium text-stone-600 dark:text-stone-300 tracking-wide">
-              Daily Habits (Gentle Rhythm)
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-serif font-medium text-stone-600 dark:text-stone-300 tracking-wide">
+                Daily Habits (Tree Nutrition)
+              </span>
+              <button
+                onClick={() => setShowRhythmSetup(true)}
+                className="text-[11px] text-sage-600 dark:text-sage-400 hover:underline flex items-center gap-0.5 font-medium"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Adjust</span>
+              </button>
+            </div>
             <span className="text-[11px] text-stone-400">
               {noPressureMode ? 'flowing' : `${todayHabitsCompleted} of ${habits.length} tended`}
             </span>
@@ -239,6 +290,11 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
         onClose={() => setShowAddModal(false)}
         onAddTask={onAddTask}
         onAddHabit={onAddHabit}
+      />
+
+      <DailyRhythmSetupModal
+        isOpen={showRhythmSetup}
+        onClose={() => setShowRhythmSetup(false)}
       />
     </div>
   );
