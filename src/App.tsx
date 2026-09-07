@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Task, type TreeState, type Priority } from './db';
 import { Navbar, type AppView } from './components/Navbar';
@@ -44,6 +44,7 @@ export function App() {
   const habits = useLiveQuery(() => db.habits.where('archived').notEqual(1).toArray()) || [];
   const habitLogsList = useLiveQuery(() => db.habitLogs.toArray()) || [];
   const recentTreeLogs = useLiveQuery(() => db.treeLogs.toArray()) || [];
+  const notes = useLiveQuery(() => db.notes.toArray()) || [];
 
   // Map habit logs into { [habitId]: { [date]: boolean } }
   const habitLogsMap: Record<number, Record<string, boolean>> = {};
@@ -155,6 +156,8 @@ export function App() {
             onToggleHabit={handleToggleHabit}
             noPressureMode={noPressureMode}
             recentTreeLogs={recentTreeLogs}
+            journalCount={notes.length}
+            recentNotes={notes}
           />
         )}
 
@@ -166,13 +169,17 @@ export function App() {
         )}
 
         {currentView === 'calendar' && (
-          <div className="px-3 pb-24">
+          <div className="px-1 pb-24">
             <CalendarView
               currentDate={currentDate}
               onSelectDate={setCurrentDate}
               onJumpToDayTasks={(date) => {
                 setCurrentDate(date);
                 setCurrentView('tasks');
+              }}
+              onJumpToJournal={(date) => {
+                setCurrentDate(date);
+                setCurrentView('notes');
               }}
             />
           </div>

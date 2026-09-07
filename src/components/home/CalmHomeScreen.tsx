@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Plus, Moon, SlidersHorizontal } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { TreeCanvas } from '../tree/TreeCanvas';
@@ -7,7 +7,7 @@ import { DayEndTransitionModal } from '../tree/DayEndTransitionModal';
 import { OneGestureAdd } from '../tasks/OneGestureAdd';
 import { CalmTaskItem } from '../tasks/CalmTaskItem';
 import { CalmHabitRow } from '../tasks/CalmHabitRow';
-import type { Task, Habit, TreeState, TreeDayLog, Priority } from '../../db';
+import type { Task, Habit, TreeState, TreeDayLog, Priority, DailyNote } from '../../db';
 
 interface CalmHomeScreenProps {
   currentDate: string; // YYYY-MM-DD
@@ -23,6 +23,9 @@ interface CalmHomeScreenProps {
   onToggleHabit: (habitId: number) => void;
   noPressureMode: boolean;
   recentTreeLogs: TreeDayLog[];
+  journalCount?: number;
+  recentNotes?: DailyNote[];
+  totalWeeksAccumulated?: number;
 }
 
 export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
@@ -39,6 +42,9 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
   onToggleHabit,
   noPressureMode,
   recentTreeLogs,
+  journalCount = 4,
+  recentNotes = [],
+  totalWeeksAccumulated = 12,
 }) => {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showDayEndModal, setShowDayEndModal] = useState(false);
@@ -99,6 +105,9 @@ export const CalmHomeScreen: React.FC<CalmHomeScreenProps> = ({
           showInspector={showStateInspector}
           onSelectState={onSetTreeState}
           size="md"
+          journalCount={journalCount}
+          recentNotes={recentNotes}
+          totalWeeksAccumulated={totalWeeksAccumulated}
         />
 
         {/* Quick Inspector Toggle Button (Subtle, for reviewers/users) */}
